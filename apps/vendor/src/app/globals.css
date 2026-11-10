@@ -1,0 +1,17 @@
+@import "@repo/ui/globals.css";
+
+/* Let Tailwind scan the shared UI package for the utility classes it uses,
+   since those components live in a separate workspace package. */
+@source "../../../../packages/ui/src/**/*.{ts,tsx}";
+
+/* Dashboard "Active Customers": the ring draws itself in from the top. */
+@media (prefers-reduced-motion: no-preference) {
+	.ring-fill {
+		animation: ring-draw 1.2s var(--ease-settle) 0.2s both;
+	}
+}
+@keyframes ring-draw {
+	from {
+		stroke-dasharray: 0 999;
+	}
+}

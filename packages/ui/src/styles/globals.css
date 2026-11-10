@@ -1,0 +1,394 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------- */
+/* Fysi design tokens, shared by every app (web, vendor, admin).          */
+/*   Primary  Forest Green (actions, headings, brand)                     */
+/*   Grey     neutrals: text, borders, surfaces                           */
+/*   Lime     Lime Yellow accent: badges, highlights, deals               */
+/* Each scale runs 50 → 900. Values from the Figma file "Design system &  */
+/* Style guide" page (colour frames 417:9549, 417:9673, 417:9816).        */
+/* Font: DM Sans (Bold, Semi Bold, Medium, Regular), loaded per app with  */
+/* next/font in its root layout as --font-dm-sans.                        */
+/*                                                                        */
+/* Grey 50–500 are near-white surfaces; 600–700 borders; 800–900 muted    */
+/* text. Body text is `ink` (not in the Figma scales: confirm against the */
+/* text styles).                                                          */
+/* ---------------------------------------------------------------------- */
+
+@theme {
+  /* Primary: Forest Green */
+  --color-primary-50: #e6ece9;
+  --color-primary-100: #b0c3ba;
+  --color-primary-200: #8aa698;
+  --color-primary-300: #547e6a;
+  --color-primary-400: #33654d;
+  --color-primary-500: #003e20;
+  --color-primary-600: #00381d;
+  --color-primary-700: #002c17;
+  --color-primary-800: #002212;
+  --color-primary-900: #001a0d;
+
+  /* Grey */
+  --color-grey-50: #feffff;
+  --color-grey-100: #fdfdfe;
+  --color-grey-200: #fcfdfd;
+  --color-grey-300: #fbfcfc;
+  --color-grey-400: #fafbfc;
+  --color-grey-500: #f9fafb;
+  --color-grey-600: #e3e4e4;
+  --color-grey-700: #b1b2b2;
+  --color-grey-800: #898a8a;
+  --color-grey-900: #696969;
+
+  /* Accent: Lime Yellow */
+  --color-lime-50: #fcffe8;
+  --color-lime-100: #f5ffb9;
+  --color-lime-200: #f0ff97;
+  --color-lime-300: #e9fe67;
+  --color-lime-400: #e5fe49;
+  --color-lime-500: #defe1c;
+  --color-lime-600: #cae719;
+  --color-lime-700: #9eb414;
+  --color-lime-800: #7a8c0f;
+  --color-lime-900: #5d6b0c;
+
+  /* Brand palette (Figma "COLOUR" swatches). Forest Green's swatch could not be read yet. */
+  --color-brand-emerald: #50c878;
+  --color-brand-sage: #9dc183;
+  --color-brand-mint: #98ff98;
+  --color-brand-olive: #808000;
+  --color-brand-light-green: #0f973d;
+  /* The 404 page's orange (Figma error page). */
+  --color-brand-amber: #e29507;
+
+  /* Social networks' own brand colours (Figma contact page icons). */
+  --color-social-facebook: #1877f2;
+  --color-social-instagram-from: #feda75;
+  --color-social-instagram-via: #d62976;
+  --color-social-instagram-to: #4f5bd5;
+
+  /* Body text */
+  --color-ink: #000000;
+
+  /* Product colour swatches (Figma storefront filter dropdown → Color) */
+  --color-swatch-red: #d92d20;
+  --color-swatch-black: #000000;
+  --color-swatch-brown: #4e1d09;
+  --color-swatch-green: #17b26a;
+
+  /* Status (not in the Figma style guide yet) */
+  --color-success-50: #e9f8ef;
+  --color-success-500: #1e9e55;
+  --color-success-700: #146b3a;
+  --color-error-50: #fdecec;
+  --color-error-400: #e04848;
+  --color-error-500: #c62f2f;
+  --color-error-700: #8c1f1f;
+  --color-warning-50: #fff8e6;
+  --color-warning-500: #f5a524;
+  --color-warning-700: #a76a08;
+  --color-info-50: #eaf2fd;
+  --color-info-500: #2f74d0;
+  --color-info-700: #1d4e8f;
+}
+
+@theme inline {
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  @apply bg-white font-sans text-ink;
+}
+
+/* Storefront pages (apps/web). */
+.shop-container {
+  @apply mx-auto max-w-[1300px] px-4 sm:px-8 lg:px-10;
+}
+
+/* Dashboards (account, vendor, admin). */
+.custom-container {
+  @apply mx-auto max-w-[2000px] px-4 sm:px-[30px] lg:px-10;
+}
+
+.h2-auth {
+  @apply text-2xl font-bold md:text-3xl lg:text-[32px];
+}
+.h2-app {
+  @apply text-[22px] font-bold md:text-3xl;
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+.hide-scroll {
+  scrollbar-width: none;
+}
+
+[data-sidebar="mobile"] {
+  border-top-right-radius: 20px !important;
+  border-bottom-right-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* shadcn semantic colours, pointed at the Fysi scales above. */
+:root {
+  --radius: 0.625rem;
+  --background: #ffffff;
+  --foreground: var(--color-ink);
+  --card: #ffffff;
+  --card-foreground: var(--color-ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-primary-500);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-lime-400);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-grey-500);
+  --muted-foreground: var(--color-grey-900);
+  --accent: var(--color-primary-50);
+  --accent-foreground: var(--color-primary-700);
+  --destructive: var(--color-error-500);
+  --border: var(--color-grey-600);
+  --input: var(--color-grey-700);
+  --ring: var(--color-primary-300);
+  --chart-1: var(--color-primary-500);
+  --chart-2: var(--color-lime-500);
+  --chart-3: var(--color-primary-300);
+  --chart-4: var(--color-grey-800);
+  --chart-5: var(--color-lime-700);
+  --sidebar: var(--color-primary-800);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--color-lime-400);
+  --sidebar-primary-foreground: var(--color-ink);
+  --sidebar-accent: var(--color-primary-700);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--color-primary-700);
+  --sidebar-ring: var(--color-primary-300);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  height: 5px;
+  border-radius: 30px;
+  width: 100%;
+  max-width: 200px;
+  --c: no-repeat linear-gradient(var(--color-primary-500) 0 0);
+  background: var(--c), var(--c), var(--color-grey-600);
+  background-size: 60% 100%;
+  animation: l16 3s infinite;
+  margin: 0 auto;
+}
+@keyframes l16 {
+  0% {
+    background-position:
+      -150% 0,
+      -150% 0;
+  }
+  66% {
+    background-position:
+      250% 0,
+      -150% 0;
+  }
+  100% {
+    background-position:
+      250% 0,
+      250% 0;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion. Short distances, soft deceleration; off for reduced motion.    */
+/*   .animate-rise    fade + 10px lift; stagger with style={{ "--i": n }} */
+/*   .animate-page    route enter (every template.tsx)                    */
+/*   .animate-pop     a settled result (added to cart, saved)             */
+/*   .animate-reveal  hidden until scrolled into view, then rises in (a   */
+/*                    tiny observer adds .is-visible; needs <html class=  */
+/*                    "js">, so without JavaScript it simply shows)       */
+/*   .animate-float   a gentle up-and-down loop (the 404 face)            */
+/*   .animate-zoom    a large photo settles from a slight zoom (heroes,   */
+/*                    auth panels); put it on the image, inside a box     */
+/*                    with overflow-hidden                                */
+/*   .animate-slide   slides in from the right (a new step of a flow;     */
+/*                    key the element on the step so it replays)          */
+/*   .hover-lift      lifts with a soft shadow on hover (pointer devices) */
+/* ---------------------------------------------------------------------- */
+
+@theme {
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  /* A small overshoot, so things land with a little bounce. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes zoom-settle {
+  from {
+    transform: scale(1.18);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(80px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float {
+  from {
+    transform: translateY(0) rotate(-1deg);
+  }
+  to {
+    transform: translateY(-18px) rotate(1deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Scroll reveal: hidden until the observer (RevealObserver) marks it visible, then it rises in. Only with JavaScript
+     (html.js), so nothing stays hidden if scripts fail. */
+  .js .animate-reveal {
+    opacity: 0;
+    transform: translateY(80px) scale(0.95);
+    transition:
+      opacity 0.9s var(--ease-settle),
+      transform 0.9s var(--ease-settle);
+    transition-delay: calc(var(--i, 0) * 90ms);
+  }
+  .js .animate-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .animate-float {
+    animation: float 2.2s ease-in-out infinite alternate;
+  }
+
+  .animate-zoom {
+    animation: zoom-settle 2.4s var(--ease-settle) both;
+  }
+
+  .animate-slide {
+    animation: slide-in 0.7s var(--ease-spring) both;
+  }
+
+  @media (hover: hover) {
+    .hover-lift {
+      transition:
+        transform 0.35s var(--ease-spring),
+        box-shadow 0.35s var(--ease-settle);
+    }
+    .hover-lift:hover {
+      transform: translateY(-10px) scale(1.03);
+      box-shadow: 0 24px 40px -18px rgb(0 0 0 / 0.4);
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.8s var(--ease-settle) both;
+    animation-delay: calc(var(--i, 0) * 120ms);
+  }
+
+  .animate-page {
+    animation: page-in 0.6s var(--ease-settle) both;
+  }
+
+  .animate-pop {
+    animation: pop 0.6s var(--ease-spring) both;
+  }
+
+  [data-state="open"][data-slot$="content"] {
+    animation-timing-function: var(--ease-settle);
+  }
+}
