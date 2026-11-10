@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { FaFacebook, FaInstagram, FaXTwitter } from "react-icons/fa6";
 import { cn } from "@repo/ui/lib/utils";
-import { Newsletter } from "@/features/home/components/Newsletter";
 import { CONTACT, SOCIAL_HANDLES, SOCIAL_LINKS } from "@/lib/site";
+import { Newsletter } from "@/features/home/components/Newsletter";
 
 export const metadata: Metadata = {
 	title: "Contact Us",
@@ -64,7 +64,13 @@ export default function Page() {
 							{PHOTOS.map((photo, i) => (
 								<div key={photo.src} className={cn("animate-reveal", i % 2 === 1 && "mt-16 lg:mt-[191px]")}>
 									<div className="hover-lift relative aspect-[313/349] overflow-hidden rounded-md border border-grey-600">
-										<Image src={photo.src} alt={photo.alt} fill sizes="(min-width: 1024px) 300px, 48vw" className="object-cover" />
+										<Image
+											src={photo.src}
+											alt={photo.alt}
+											fill
+											sizes="(min-width: 1024px) 300px, 48vw"
+											className="object-cover"
+										/>
 									</div>
 									{/* Desktop: the handles sit under the third photo (Figma). */}
 									{i === 2 && <SocialHandles className="mt-10 hidden lg:flex" />}
@@ -93,7 +99,12 @@ function SocialHandles({ className }: { className?: string }) {
 				</span>
 			),
 		},
-		{ label: "Facebook", handle: SOCIAL_HANDLES.facebook, href: SOCIAL_LINKS.facebook, icon: <FaFacebook className="size-6 text-social-facebook" /> },
+		{
+			label: "Facebook",
+			handle: SOCIAL_HANDLES.facebook,
+			href: SOCIAL_LINKS.facebook,
+			icon: <FaFacebook className="size-6 text-social-facebook" />,
+		},
 		{ label: "X", handle: SOCIAL_HANDLES.x, href: SOCIAL_LINKS.x, icon: <FaXTwitter className="size-6 text-ink" /> },
 	];
 
@@ -101,7 +112,13 @@ function SocialHandles({ className }: { className?: string }) {
 		<ul className={cn("flex flex-col gap-2", className)} aria-label="Fysi on social media">
 			{links.map((link) => (
 				<li key={link.label}>
-					<a href={link.href} target="_blank" rel="noreferrer" className="flex w-fit items-center gap-1.5 text-[13px] text-ink hover:text-primary-500" aria-label={`${link.label} ${link.handle}`}>
+					<a
+						href={link.href}
+						target="_blank"
+						rel="noreferrer"
+						className="flex w-fit items-center gap-1.5 text-[13px] text-ink hover:text-primary-500"
+						aria-label={`${link.label} ${link.handle}`}
+					>
 						<span aria-hidden>{link.icon}</span>
 						{link.handle}
 					</a>

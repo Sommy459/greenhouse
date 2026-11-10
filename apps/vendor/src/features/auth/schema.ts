@@ -25,7 +25,7 @@ export const VerifyCodeSchema = z.object({
 			z
 				.string()
 				.nonempty("Enter the verification code")
-				.regex(/^\d{4,8}$/, "Enter the code from the e-mail"),
+				.regex(/^\d{6}$/, "Enter the 6-digit code from the e-mail"),
 		),
 });
 
@@ -44,9 +44,11 @@ export const DIAL_CODES = [
 	{ code: "+1", country: "United States / Canada" },
 ] as const;
 
-/** Step 4 (Figma "Personal Information"): the hint under the fields lists these rules. */
+/** Step 2 (Figma "Personal Information" plus your name and shop name): the hint under the fields lists the password rules. */
 export const PersonalInfoSchema = z
 	.object({
+		name: z.string().trim().nonempty("Enter your full name").max(100, "Too long"),
+		business_name: z.string().trim().nonempty("Enter your shop name").max(80, "Too long"),
 		dial_code: z.string().nonempty(),
 		phone: z.string().trim().nonempty("Enter your phone number"),
 		password: z

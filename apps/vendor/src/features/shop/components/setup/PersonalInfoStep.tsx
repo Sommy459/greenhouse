@@ -7,42 +7,60 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@repo/ui/input";
 import { cn } from "@repo/ui/lib/utils";
 import { PasswordInput } from "@/features/auth/components/PasswordInput";
-import { useSignUp } from "@/features/auth/hooks";
+import { useRegister } from "@/features/auth/hooks";
 import { DIAL_CODES, fullPhoneNumber, PersonalInfoSchema, type PersonalInfoValues } from "@/features/auth/schema";
 import { BackLink } from "@/features/shop/components/setup/BackLink";
 import { SETUP_FIELD, SETUP_SUBMIT } from "@/features/shop/styles";
 
 interface Props {
 	email: string;
-	country: string;
-	verificationToken: string;
 	onBack: () => void;
-	onSignedUp: () => void;
+	onRegistered: () => void;
 }
 
-/** Figma step 4 "Personal Information": phone number and password. Next creates the seller account. */
-export function PersonalInfoStep({ email, country, verificationToken, onBack, onSignedUp }: Props) {
-	const signUp = useSignUp({ onSignedUp });
+/** Figma "Personal Information" with your name and shop name: Next creates the seller account and emails a code. */
+export function PersonalInfoStep({ email, onBack, onRegistered }: Props) {
+	const signUp = useRegister({ onRegistered });
 	const form = useForm<PersonalInfoValues>({
 		resolver: zodResolver(PersonalInfoSchema),
-		defaultValues: { dial_code: "+234", phone: "", password: "", confirm_password: "" },
+		defaultValues: { name: "", business_name: "", dial_code: "+234", phone: "", password: "", confirm_password: "" },
 	});
 	const dialCode = useWatch({ control: form.control, name: "dial_code" });
 
-	const onSubmit = ({ dial_code, phone, password }: PersonalInfoValues) =>
-		signUp.mutate({
-			email,
-			password,
-			phone_number: fullPhoneNumber(dial_code, phone),
-			country,
-			verification_token: verificationToken,
-			role: "vendor",
-		});
+	const onSubmit = ({ name, business_name, dial_code, phone, password }: PersonalInfoValues) =>
+		signUp.mutate({ email, password, name, businessName: business_name, phone: fullPhoneNumber(dial_code, phone) });
 
 	return (
 		<Form {...form}>
 			<form noValidate onSubmit={form.handleSubmit(onSubmit)} className="mt-4 flex flex-col lg:mt-2">
 				<BackLink onClick={onBack} />
+
+				<FormField
+					control={form.control}
+					name="name"
+					render={({ field }) => (
+						<FormItem className="mb-5 gap-2">
+							<FormLabel className="sr-only">Full name</FormLabel>
+							<FormControl>
+								<Input autoComplete="name" placeholder="Your Full Name" className={SETUP_FIELD} {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<FormField
+					control={form.control}
+					name="business_name"
+					render={({ field }) => (
+						<FormItem className="mb-5 gap-2">
+							<FormLabel className="sr-only">Shop name</FormLabel>
+							<FormControl>
+								<Input autoComplete="organization" placeholder="Shop Name" className={SETUP_FIELD} {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
 
 				<FormField
 					control={form.control}

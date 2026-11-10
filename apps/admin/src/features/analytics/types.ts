@@ -1,38 +1,39 @@
-/** Placeholder shapes until matched to the API. Money is whole naira. */
+/** GET /admin/analytics: marketplace totals over a range, each against the same range before it. Money is US cents. */
+import type { Money } from "@/lib/format";
 
-/** Figma "Daily / Week / Month": the last 14 days, the last 12 weeks, or January to December. */
-export const SALES_PERIODS = ["daily", "weekly", "monthly"] as const;
-export type SalesPeriod = (typeof SALES_PERIODS)[number];
+export type Period = "day" | "week" | "month";
 
-/** `data` of GET /admin/analytics?period=… */
-export interface SalesAnalytics {
-	period: SalesPeriod;
-	/** Paid sales over the whole period (the badge beside "Overall Sales" and "Sales Report"). */
-	total: number;
-	/** One bar each, oldest first; `label` is what the axis shows (e.g. "Jan", "3 Nov", "W45"). */
-	sales: { label: string; amount: number }[];
-	/** "Sales Report": the same total split by category, largest first. */
-	by_category: { category: string; amount: number }[];
+/** `change` is a percentage (null without a previous value). */
+export interface Metric<T> {
+	value: T;
+	previous: T;
+	change: number | null;
 }
 
-/** A row of GET /admin/analytics/best-sellers. */
-export interface BestSellingProduct {
+export interface Ranked {
 	id: string;
 	name: string;
-	image_url: string | null;
-	category: string;
-	/** Units sold in the chosen dates. */
-	sold: number;
-	/** Average customer rating, 0–5. */
-	rating: number;
-	vendor: { id: string; shop_name: string; location: string; avatar_url: string | null };
+	orders: number;
+	sales: Money;
 }
 
-export interface BestSellerParams {
-	from?: string;
-	to?: string;
-	/** Comma-separated category names. */
-	category?: string;
-	page: number;
-	limit: number;
+export interface AdminAnalytics {
+	from: string;
+	to: string;
+	/** Everything customers paid. */
+	gmv: Metric<Money>;
+	commission: Metric<Money>;
+	orders: Metric<number>;
+	averageOrder: Metric<Money>;
+	newCustomers: Metric<number>;
+	newVendors: Metric<number>;
+	buyers: Metric<number>;
+	/** Buyers who ordered more than once, in %. */
+	repeatBuyerRate: number | null;
+	refunds: Metric<Money>;
+	vendorOrdersByStatus: Record<string, number>;
+	series: { period: string; orders: number; gmv: Money; commission: Money; newCustomers: number; newVendors: number }[];
+	topVendors: Ranked[];
+	topProducts: Ranked[];
+	topCategories: Ranked[];
 }

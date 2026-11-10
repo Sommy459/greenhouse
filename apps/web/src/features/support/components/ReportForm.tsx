@@ -36,7 +36,7 @@ function ReportFormFields({ orderNumber }: { orderNumber: string }) {
 	const user = useSession((s) => s.user);
 	const [sent, setSent] = useState(false);
 	const defaults: ReportValues = {
-		name: [user?.first_name, user?.last_name].filter(Boolean).join(" "),
+		name: user?.name ?? "",
 		email: user?.email ?? "",
 		issue_type: "",
 		order_number: orderNumber,

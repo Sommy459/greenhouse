@@ -12,30 +12,23 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { cn } from "@repo/ui/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/popover";
-import {
-	AVAILABILITY_OPTIONS,
-	CATEGORY_OPTIONS,
-	COLOR_OPTIONS,
-	SORT_OPTIONS,
-	type SortValue,
-} from "@/features/catalog/listing-params";
+import { CATEGORY_OPTIONS, SHOW_OPTIONS, SORT_OPTIONS } from "@/features/catalog/listing-params";
+import type { SortValue } from "@/features/catalog/types";
 
 const TRIGGER =
 	"flex items-center gap-1 text-sm text-ink outline-none hover:text-primary-500 data-[state=open]:text-primary-500 [&[data-state=open]>svg]:rotate-180";
 
-export interface FilterState {
-	categories: string[];
-	colors: string[];
-	availability: string[];
-}
-
 interface Props {
-	filters: FilterState;
+	/** The ticked category; null hides the section (a category page is already one category). */
+	category: string | undefined | null;
+	show: string[];
+	minPrice: number | undefined;
+	maxPrice: number | undefined;
 	/** Shown on "Filter" when anything is ticked by the visitor. */
 	filterCount: number;
-	onCategoriesChange: (values: string[]) => void;
-	onColorsChange: (values: string[]) => void;
-	onAvailabilityChange: (values: string[]) => void;
+	onCategoryChange: (value: string | undefined) => void;
+	onShowChange: (values: string[]) => void;
+	onPriceChange: (min: number | undefined, max: number | undefined) => void;
 	sort: SortValue;
 	onSortChange: (value: SortValue) => void;
 }
@@ -51,10 +44,10 @@ export function ListingToolbar(props: Props) {
 }
 
 /**
- * Figma filter dropdown: Categories, Color and Availability, each opening its checkbox list (Figma "catalogue drop
- * down" for Categories). Ticks apply straight away; the menu stays open so several can be ticked.
+ * The Figma filter dropdown, with the filters the API supports: one category, Certified only / In stock, and a price
+ * range in dollars. Ticks apply straight away; the menu stays open.
  */
-function FilterMenu({ filters, filterCount, onCategoriesChange, onColorsChange, onAvailabilityChange }: Props) {
+function FilterMenu({ category, show, minPrice, maxPrice, filterCount, onCategoryChange, onShowChange, onPriceChange }: Props) {
 	return (
 		<Popover>
 			<PopoverTrigger className={TRIGGER}>
@@ -69,25 +62,87 @@ function FilterMenu({ filters, filterCount, onCategoriesChange, onColorsChange, 
 			<PopoverContent
 				align="start"
 				sideOffset={10}
-				className="max-h-[70dvh] w-[210px] overflow-y-auto rounded-[7px] border-grey-600 bg-grey-500 px-3.5 py-1 shadow-lg"
+				className="max-h-[70dvh] w-[230px] overflow-y-auto rounded-[7px] border-grey-600 bg-grey-500 px-3.5 py-1 shadow-lg"
 			>
+				{category !== null && (
+					<FilterSection
+						title="Categories"
+						options={CATEGORY_OPTIONS}
+						selected={category ? [category] : []}
+						// One at a time: ticking another replaces it.
+						onChange={(values) => onCategoryChange(values.filter((v) => v !== category).at(-1))}
+						defaultOpen
+						allLabel="All"
+					/>
+				)}
 				<FilterSection
-					title="Categories"
-					options={CATEGORY_OPTIONS}
-					selected={filters.categories}
-					onChange={onCategoriesChange}
-					defaultOpen
+					title="Show"
+					options={SHOW_OPTIONS}
+					selected={show}
+					onChange={onShowChange}
+					defaultOpen={category === null}
 				/>
-				<FilterSection title="Color" options={COLOR_OPTIONS} selected={filters.colors} onChange={onColorsChange} />
-				<FilterSection
-					title="Availability"
-					options={AVAILABILITY_OPTIONS}
-					selected={filters.availability}
-					onChange={onAvailabilityChange}
-					allLabel="All"
-				/>
+				<PriceSection key={`${minPrice}-${maxPrice}`} min={minPrice} max={maxPrice} onApply={onPriceChange} />
 			</PopoverContent>
 		</Popover>
+	);
+}
+
+/** Price (USD): from and to, applied with the button or Enter. */
+function PriceSection({
+	min,
+	max,
+	onApply,
+}: {
+	min: number | undefined;
+	max: number | undefined;
+	onApply: (min: number | undefined, max: number | undefined) => void;
+}) {
+	const [from, setFrom] = useState(min != null ? String(min) : "");
+	const [to, setTo] = useState(max != null ? String(max) : "");
+	const value = (raw: string) =>
+		raw.trim() === "" || !Number.isFinite(Number(raw)) ? undefined : Math.max(0, Math.floor(Number(raw)));
+	const FIELD =
+		"h-8 w-full rounded-[5px] border border-grey-600 bg-white px-2 text-sm text-ink outline-none focus-visible:border-primary-300";
+
+	return (
+		<form
+			noValidate
+			onSubmit={(e) => {
+				e.preventDefault();
+				const a = value(from);
+				const b = value(to);
+				onApply(a != null && b != null && a > b ? b : a, a != null && b != null && a > b ? a : b);
+			}}
+			className="border-b border-grey-600 py-2.5 last:border-b-0"
+		>
+			<p className="text-[15px] text-ink">Price (USD)</p>
+			<div className="mt-2 flex items-center gap-2">
+				<input
+					aria-label="Lowest price, dollars"
+					inputMode="numeric"
+					placeholder="Min $"
+					value={from}
+					onChange={(e) => setFrom(e.target.value)}
+					className={FIELD}
+				/>
+				<span className="text-grey-800">–</span>
+				<input
+					aria-label="Highest price, dollars"
+					inputMode="numeric"
+					placeholder="Max $"
+					value={to}
+					onChange={(e) => setTo(e.target.value)}
+					className={FIELD}
+				/>
+			</div>
+			<button
+				type="submit"
+				className="mt-2 h-8 w-full rounded-[5px] bg-primary-500 text-sm font-medium text-white hover:bg-primary-400"
+			>
+				Apply
+			</button>
+		</form>
 	);
 }
 

@@ -15,49 +15,36 @@ export function ProductInfoSections({ product }: { product: ProductDetail }) {
 			<Section title="Delivery Information">
 				{/* Placeholder copy until delivery terms and couriers are decided (PRD open question). */}
 				<ul className="list-disc space-y-1 pl-4">
-					<li>Lagos: 1–3 working days. Elsewhere in Nigeria: 3–7 working days.</li>
 					<li>
-						Shipped by {product.vendor?.shop_name ?? "the vendor"}
-						{product.vendor ? ` from ${product.vendor.city}, ${product.vendor.state}` : ""}.
+						Shipped by {product.vendor.businessName}
+						{product.vendor.city ? ` from ${product.vendor.city}${product.vendor.state ? `, ${product.vendor.state}` : ""}` : ""}.
 					</li>
-					<li>Packed without single-use plastic. Delivery cost is shown at checkout.</li>
+					<li>The vendor adds the courier and tracking number when it ships; you&apos;ll get an email.</li>
+					<li>Your payment is held safely until you confirm delivery, or for 7 days after shipping.</li>
 				</ul>
 			</Section>
 		</div>
 	);
 }
 
-/**
- * Trust is the product: the badge and score come from admin-verified data only, and look the same wherever they appear.
- */
+/** Trust is the product: the badge and certifications come from admin decisions only, shown the same everywhere. */
 function EcoCertification({ product }: { product: ProductDetail }) {
-	const verified = product.certifications.filter((c) => c.status === "verified");
-
-	if (!product.eco_verified) {
-		return <p>This product hasn&apos;t been eco-verified by Fysi yet.</p>;
-	}
+	if (!product.badge) return <p>This product hasn&apos;t been certified or reviewed by Fysi yet.</p>;
 	return (
 		<div className="space-y-3">
 			<p className="flex items-center gap-2 font-medium text-primary-500">
 				<BadgeCheck className="size-5" aria-hidden />
-				Eco-verified by Fysi
+				{product.badge === "certified"
+					? "Certified: a recognised eco label, checked by Fysi"
+					: "Fysi Reviewed: evidence checked by the Fysi team"}
 			</p>
-			{product.sustainability_score !== null && (
-				<p>
-					Sustainability score: <strong className="font-semibold text-ink">{product.sustainability_score}/100</strong>
-				</p>
-			)}
-			{verified.length > 0 && (
-				<ul className="space-y-1">
-					{verified.map((c) => (
-						<li key={c.id}>
-							{c.name} <span className="text-grey-800">· {c.issuer}</span>
-						</li>
+			{product.certifications.length > 0 && (
+				<ul className="list-disc space-y-1 pl-4">
+					{product.certifications.map((c) => (
+						<li key={c.id}>{c.name}</li>
 					))}
 				</ul>
 			)}
-			{product.materials.length > 0 && <p>Materials: {product.materials.join(", ")}</p>}
-			{product.sourcing && <p>{product.sourcing}</p>}
 		</div>
 	);
 }

@@ -1,77 +1,65 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
-import { api, errorMessage, getData } from "@/lib/api/client";
-import { downloadCsv } from "@/lib/api/download";
+import { api, errorMessage, getData, getPage } from "@/lib/api/client";
 import { backendRoutes } from "@/lib/routes";
 import { useToast } from "@/lib/use-toast";
-import { ORDER_STATUS_LABEL } from "@/features/orders/options";
-import type { Paginated } from "@/features/products/types";
-import type { OrderDetail, OrderListParams, StatusUpdate, VendorOrder } from "@/features/orders/types";
+import type { OrderStatus, StatusUpdate, VendorOrder } from "@/features/orders/types";
 
 const KEY = ["vendor", "orders"];
 
-/** V8: the shop's orders, with tabs, search, dates, a status filter, sort and pages. */
-export function useMyOrders(params: OrderListParams) {
+/** PRD V8: the shop's paid orders, newest first, by status. */
+export function useMyOrders(params: { status?: OrderStatus; page: number; limit: number }) {
 	return useQuery({
-		queryKey: [...KEY, params],
-		queryFn: () => getData<Paginated<VendorOrder>>(backendRoutes.MY_ORDERS, { ...params }),
+		queryKey: [...KEY, "list", params],
+		queryFn: () => getPage<VendorOrder>(backendRoutes.MY_ORDERS, { ...params }),
 		placeholderData: keepPreviousData,
 	});
 }
 
-/** The Order Details dialog. */
-export function useMyOrder(orderId: string | null) {
+export function useMyOrder(id: string | null) {
 	return useQuery({
-		queryKey: [...KEY, "detail", orderId],
-		queryFn: () => getData<OrderDetail>(backendRoutes.MY_ORDER(orderId!)),
-		enabled: !!orderId,
+		queryKey: [...KEY, id],
+		queryFn: () => getData<VendorOrder>(backendRoutes.MY_ORDER(id!)),
+		enabled: !!id,
 	});
 }
 
-/** V8: move an order on (with courier and tracking number when shipping). Never retried. */
-export function useUpdateOrderStatus(orderId: string) {
+/** Processing → Shipped (carrier and tracking number; starts the 7-day escrow timer) → Delivered. Never retried. */
+export function useUpdateOrderStatus(id: string) {
 	const toast = useToast();
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async (update: StatusUpdate) =>
-			(await api.post(backendRoutes.MY_ORDER_STATUS(orderId), update)).data.data as OrderDetail,
+			(await api.patch(backendRoutes.MY_ORDER_STATUS(id), update)).data.data as VendorOrder,
 		retry: false,
 		onSuccess: (order) => {
-			queryClient.setQueryData([...KEY, "detail", orderId], order);
-			queryClient.invalidateQueries({ queryKey: KEY, predicate: (q) => q.queryKey[2] !== "detail" });
-			queryClient.invalidateQueries({ queryKey: ["vendor", "dashboard"] });
-			toast.success(`Order ${order.number} is now ${ORDER_STATUS_LABEL[order.status].toLowerCase()}`);
+			queryClient.setQueryData([...KEY, id], order);
+			queryClient.invalidateQueries({ queryKey: [...KEY, "list"] });
+			toast.success(
+				order.status === "shipped"
+					? "Marked as shipped. The customer has the tracking number."
+					: order.status === "delivered"
+						? "Marked as delivered. You're paid when the customer confirms, or 7 days after shipping."
+						: "Order updated",
+			);
 		},
-		onError: (error) => toast.error(errorMessage(error)),
+		onError: (error) => toast.error(errorMessage(error, "Couldn't update the order. Try again.")),
 	});
 }
 
-/** "Export": the ticked orders, or every order matching the tab, search and filters. */
-export function useExportOrders() {
+/** Cancel before shipping, with a reason the customer sees; Fysi refunds the customer. Never retried. */
+export function useCancelOrder(id: string) {
 	const toast = useToast();
+	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (params: Omit<OrderListParams, "page" | "limit" | "sort"> & { ids?: string }) =>
-			downloadCsv(backendRoutes.MY_ORDERS_EXPORT, params, "fysi-my-orders"),
+		mutationFn: async (reason: string) => (await api.post(backendRoutes.CANCEL_ORDER(id), { reason })).data.data as VendorOrder,
 		retry: false,
-		onError: (error) => toast.error(errorMessage(error, "Couldn't export your orders. Try again.")),
-	});
-}
-
-/** Track Orders: one package by tracking number or order ID. `null` when nothing matches (the API's 404). */
-export function useTrackOrder(q: string) {
-	return useQuery({
-		queryKey: [...KEY, "track", q],
-		queryFn: async () => {
-			try {
-				return await getData<OrderDetail>(backendRoutes.TRACK_ORDER, { q });
-			} catch (error) {
-				if (isAxiosError(error) && error.response?.status === 404) return null;
-				throw error;
-			}
+		onSuccess: (order) => {
+			queryClient.setQueryData([...KEY, id], order);
+			queryClient.invalidateQueries({ queryKey: [...KEY, "list"] });
+			toast.success("Order cancelled. The customer is refunded.");
 		},
-		enabled: q.trim().length > 0,
-		retry: false,
+		onError: (error) => toast.error(errorMessage(error, "Couldn't cancel the order. Try again.")),
 	});
 }

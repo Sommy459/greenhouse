@@ -1,38 +1,28 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, errorMessage, getData } from "@/lib/api/client";
-import { downloadCsv } from "@/lib/api/download";
+import { api, errorMessage, getData, getPage } from "@/lib/api/client";
 import { backendRoutes } from "@/lib/routes";
 import { useToast } from "@/lib/use-toast";
-import { toProductBody, type ProductValues } from "@/features/products/schema";
-import type {
-	Category,
-	Paginated,
-	ProductListParams,
-	ProductStats,
-	ProductStatus,
-	ShopCertification,
-	VendorProduct,
-} from "@/features/products/types";
+import type { ProductBody, ProductListParams, ProductStatus, VendorProduct } from "@/features/products/types";
 
 const KEY = ["vendor", "products"];
+const multipart = { headers: { "Content-Type": "multipart/form-data" } };
 
-/** V7: the shop's listings, with search, stock filter, dates, sort and pages. */
+/** V7: the shop's products, newest first, by status and search. */
 export function useMyProducts(params: ProductListParams) {
 	return useQuery({
-		queryKey: [...KEY, params],
-		queryFn: () => getData<Paginated<VendorProduct>>(backendRoutes.MY_PRODUCTS, { ...params }),
+		queryKey: [...KEY, "list", params],
+		queryFn: () => getPage<VendorProduct>(backendRoutes.MY_PRODUCTS, { ...params }),
 		placeholderData: keepPreviousData,
 	});
 }
 
-/** The four totals above Manage Products. */
-export function useProductStats() {
-	return useQuery({ queryKey: [...KEY, "stats"], queryFn: () => getData<ProductStats>(backendRoutes.MY_PRODUCT_STATS) });
+export function useMyProduct(id: string) {
+	return useQuery({ queryKey: [...KEY, id], queryFn: () => getData<VendorProduct>(backendRoutes.MY_PRODUCT(id)) });
 }
 
-/** V7 hide / show: `inactive` takes listings off the store; `active` puts them back. One request per listing. */
+/** Hide / show (PRD V7): `hidden` takes products off the store; `active` puts them back. One request each. */
 export function useSetProductsStatus() {
 	const toast = useToast();
 	const queryClient = useQueryClient();
@@ -44,7 +34,7 @@ export function useSetProductsStatus() {
 		retry: false,
 		onSuccess: ({ count, status }) => {
 			const what = count === 1 ? "1 product" : `${count} products`;
-			toast.success(status === "inactive" ? `${what} hidden from the store` : `${what} back in the store`);
+			toast.success(status === "hidden" ? `${what} hidden from the store` : `${what} back in the store`);
 		},
 		onError: (error) => toast.error(errorMessage(error)),
 		// Some may have saved before one failed: refresh either way.
@@ -52,7 +42,6 @@ export function useSetProductsStatus() {
 	});
 }
 
-/** V7 delete. */
 export function useDeleteProduct() {
 	const toast = useToast();
 	const queryClient = useQueryClient();
@@ -63,48 +52,54 @@ export function useDeleteProduct() {
 		},
 		retry: false,
 		onSuccess: (product) => {
-			toast.success(`${product.name} was deleted`);
+			toast.success(`${product.title} was deleted`);
 			queryClient.invalidateQueries({ queryKey: KEY });
 		},
 		onError: (error) => toast.error(errorMessage(error)),
 	});
 }
 
-/** "Export": the ticked products, or every product matching the search and filters. */
-export function useExportProducts() {
-	const toast = useToast();
-	return useMutation({
-		mutationFn: (params: Omit<ProductListParams, "page" | "limit" | "sort"> & { ids?: string }) =>
-			downloadCsv(backendRoutes.MY_PRODUCTS_EXPORT, params, "fysi-my-products"),
-		retry: false,
-		onError: (error) => toast.error(errorMessage(error, "Couldn't export your products. Try again.")),
-	});
+export interface SaveProduct {
+	/** Absent when creating. */
+	id?: string;
+	body: Partial<ProductBody>;
+	/** New photos to add (in order, after the existing ones). */
+	newImages: File[];
+	/** Existing photos to delete. */
+	removedImageIds: string[];
+	/** The kept photos' order, when it changed. */
+	imageOrder?: string[];
 }
 
-/** The Category list on Add Products. */
-export function useCategories() {
-	return useQuery({ queryKey: ["categories"], queryFn: () => getData<Category[]>(backendRoutes.CATEGORIES) });
-}
-
-/** The shop's certificates that can tag a product: verified ones, and ones still awaiting review. */
-export function useMyCertifications() {
-	return useQuery({
-		queryKey: ["vendor", "certifications"],
-		queryFn: async () =>
-			(await getData<ShopCertification[]>(backendRoutes.MY_CERTIFICATIONS)).filter(
-				(c) => c.status === "verified" || c.status === "pending",
-			),
-	});
-}
-
-/** "Submit" on Add Products. Multipart (the photos are files); never retried, so a slow answer can't list it twice. */
-export function useCreateProduct() {
+/**
+ * Create or edit (PRD V7): the details first, then photo deletions, uploads (one per request, JPEG/PNG/WebP up to 5 MB,
+ * 8 at most) and the new order. Never retried: a slow answer can't create it twice.
+ */
+export function useSaveProduct() {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (values: ProductValues) =>
-			(await api.post(backendRoutes.MY_PRODUCTS, toProductBody(values), { headers: { "Content-Type": "multipart/form-data" } }))
-				.data.data as VendorProduct,
+		mutationFn: async ({ id, body, newImages, removedImageIds, imageOrder }: SaveProduct) => {
+			let product = id
+				? ((await api.patch(backendRoutes.MY_PRODUCT(id), body)).data.data as VendorProduct)
+				: ((await api.post(backendRoutes.MY_PRODUCTS, body)).data.data as VendorProduct);
+			for (const imageId of removedImageIds) {
+				product = (await api.delete(backendRoutes.PRODUCT_IMAGE(product.id, imageId))).data.data as VendorProduct;
+			}
+			if (imageOrder?.length) {
+				product = (await api.put(backendRoutes.PRODUCT_IMAGE_ORDER(product.id), { imageIds: imageOrder })).data
+					.data as VendorProduct;
+			}
+			for (const file of newImages) {
+				const data = new FormData();
+				data.set("image", file);
+				product = (await api.post(backendRoutes.PRODUCT_IMAGES(product.id), data, multipart)).data.data as VendorProduct;
+			}
+			return product;
+		},
 		retry: false,
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: KEY }),
+		onSuccess: (product) => {
+			queryClient.setQueryData([...KEY, product.id], product);
+			queryClient.invalidateQueries({ queryKey: [...KEY, "list"] });
+		},
 	});
 }

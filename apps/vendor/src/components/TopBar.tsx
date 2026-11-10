@@ -25,7 +25,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 	const section = currentSection(usePathname());
 	const user = useSession((s) => s.user);
 	const signOut = useSignOut();
-	const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
+	const name = user?.name ?? "";
 
 	const onSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -84,7 +84,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 							aria-label="Account menu"
 							className="rounded-full focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:outline-none"
 						>
-							<UserAvatar name={name} src={user?.avatar_url} className="size-9" />
+							<UserAvatar name={name} src={user?.avatarUrl} className="size-9" />
 						</button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-56">

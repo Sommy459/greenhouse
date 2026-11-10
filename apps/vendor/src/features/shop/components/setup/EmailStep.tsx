@@ -6,7 +6,6 @@ import { Button } from "@repo/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { cn } from "@repo/ui/lib/utils";
-import { useRequestEmailCode } from "@/features/auth/hooks";
 import { EmailSchema, type EmailValues } from "@/features/auth/schema";
 import { BackLink } from "@/features/shop/components/setup/BackLink";
 import { SETUP_FIELD, SETUP_LABEL, SETUP_SUBMIT } from "@/features/shop/styles";
@@ -22,11 +21,9 @@ export function EmailStep({
 	onNext: (values: EmailValues) => void;
 }) {
 	const form = useForm<EmailValues>({ resolver: zodResolver(EmailSchema), defaultValues: { email: defaultValue } });
-	const requestCode = useRequestEmailCode();
 
 	const onSubmit = ({ email }: EmailValues) => {
-		const normalised = email.trim().toLowerCase();
-		requestCode.mutate(normalised, { onSuccess: () => onNext({ email: normalised }) });
+		onNext({ email: email.trim().toLowerCase() });
 	};
 
 	return (
@@ -53,7 +50,7 @@ export function EmailStep({
 						</FormItem>
 					)}
 				/>
-				<Button type="submit" isLoading={requestCode.isPending} className={cn(SETUP_SUBMIT, "mt-[70px]")}>
+				<Button type="submit" className={cn(SETUP_SUBMIT, "mt-[70px]")}>
 					Next
 				</Button>
 			</form>

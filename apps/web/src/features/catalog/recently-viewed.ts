@@ -21,12 +21,40 @@ export const useRecentlyViewed = create<RecentlyViewed>()(
 			products: [],
 			record: (product) =>
 				set((state) => {
-					// A list card doesn't need the certifications; keep the stored copy small.
-					const item: Partial<ProductDetail> = { ...product };
-					delete item.certifications;
-					return { products: [item as Product, ...state.products.filter((p) => p.id !== product.id)].slice(0, LIMIT) };
+					// Keep only what a list card shows (the product page adds description, stock and photos).
+					const {
+						id,
+						slug,
+						title,
+						price,
+						originalPrice,
+						discountPercent,
+						inStock,
+						imageUrl,
+						badge,
+						certifications,
+						category,
+						vendor,
+						createdAt,
+					} = product;
+					const item: Product = {
+						id,
+						slug,
+						title,
+						price,
+						originalPrice,
+						discountPercent,
+						inStock,
+						imageUrl,
+						badge,
+						certifications,
+						category,
+						vendor,
+						createdAt,
+					};
+					return { products: [item, ...state.products.filter((p) => p.id !== product.id)].slice(0, LIMIT) };
 				}),
 		}),
-		{ name: "greenhouse-recently-viewed" },
+		{ name: "fysi-recently-viewed" },
 	),
 );

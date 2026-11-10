@@ -1,4 +1,4 @@
-import { CookingPot, House, Luggage, Paperclip, Scissors, Shirt, SprayCan, Watch, type LucideIcon } from "lucide-react";
+import { House, Lightbulb, Luggage, Paperclip, Shirt, SprayCan, type LucideIcon } from "lucide-react";
 import { aboutRoutes, accountRoutes, authRoutes, shopRoutes, supportRoutes } from "@/lib/routes";
 import { SOCIAL_LINKS } from "@/lib/site";
 
@@ -17,7 +17,7 @@ interface CategoryLink {
 	pageTitle?: string;
 }
 
-/** In the Catalogue menu's order: two columns, read left to right. */
+/** In the Catalogue menu's order. Slugs are the API's six categories (GET /categories; PRD). */
 export const CATEGORY_LINKS: CategoryLink[] = [
 	{ label: "Clothing", href: shopRoutes.CATEGORY("clothing"), image: "/images/landing/category-clothing.jpg", icon: Shirt },
 	{
@@ -28,48 +28,35 @@ export const CATEGORY_LINKS: CategoryLink[] = [
 		icon: House,
 	},
 	{
-		label: "Kitchen Items",
-		href: shopRoutes.CATEGORY("kitchen"),
-		image: "/images/landing/category-kitchen.jpg",
-		icon: CookingPot,
-	},
-	{
-		label: "Beauty & Cosmetics",
-		href: shopRoutes.CATEGORY("beauty"),
+		label: "Beauty & Personal Care",
+		href: shopRoutes.CATEGORY("beauty-personal-care"),
 		image: "/images/landing/category-beauty.jpg",
 		icon: SprayCan,
 	},
 	{
-		label: "Personal Care",
-		href: shopRoutes.CATEGORY("personal-care"),
-		image: "/images/landing/category-personal-care.jpg",
-		icon: Scissors,
-	},
-	{
-		label: "Outdoor & Travel",
-		href: shopRoutes.CATEGORY("outdoor"),
-		image: "/images/landing/category-outdoor.jpg",
-		icon: Luggage,
+		label: "Eco-friendly Gadgets",
+		href: shopRoutes.CATEGORY("gadgets"),
+		image: "/images/landing/category-accessories.jpg",
+		icon: Lightbulb,
 	},
 	{
 		label: "Office Supplies",
-		href: shopRoutes.CATEGORY("office"),
+		href: shopRoutes.CATEGORY("office-supplies"),
 		image: "/images/landing/category-office.jpg",
 		icon: Paperclip,
 	},
 	{
-		label: "Accessories",
-		href: shopRoutes.CATEGORY("accessories"),
-		image: "/images/landing/category-accessories.jpg",
-		icon: Watch,
+		label: "Outdoor & Travel",
+		href: shopRoutes.CATEGORY("outdoor-travel"),
+		image: "/images/landing/category-outdoor.jpg",
+		icon: Luggage,
 	},
 ];
 
+/** Collections the API can list: newest first, and products with the "Certified" badge. */
 export const COLLECTION_LINKS = [
-	{ label: "New in", href: shopRoutes.COLLECTION("new-in") },
-	{ label: "Products on demand", href: shopRoutes.COLLECTION("on-demand") },
-	{ label: "Hot deals", href: shopRoutes.COLLECTION("hot-deals") },
-	{ label: "Sustainability highlights", href: shopRoutes.COLLECTION("sustainability") },
+	{ label: "New in", href: shopRoutes.COLLECTION("new-in"), query: { sort: "newest" as const } },
+	{ label: "Certified products", href: shopRoutes.COLLECTION("certified"), query: { certified: true } },
 ];
 
 /** Figma header menu (the ☰ beside the logo on desktop). `external` links open in a new tab. */
@@ -97,9 +84,9 @@ export const FOOTER_CONTACT = [
 export const FOOTER_ACCOUNT = [
 	{ label: "Sign In", href: authRoutes.SIGN_IN() },
 	{ label: "Order history", href: accountRoutes.ORDERS },
-	{ label: "Profile", href: accountRoutes.PROFILE },
 	{ label: "Wishlist", href: accountRoutes.WISHLIST },
-	{ label: "Payment", href: accountRoutes.PAYMENT },
+	{ label: "Wallet", href: accountRoutes.WALLET },
+	{ label: "Settings", href: accountRoutes.SETTINGS },
 ];
 
 export const FOOTER_SUPPORT = [

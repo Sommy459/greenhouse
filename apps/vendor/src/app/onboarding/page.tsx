@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { SellerSetupWizard } from "@/features/shop/components/SellerSetupWizard";
+import { OnboardingView } from "@/features/shop/components/OnboardingView";
 
-export const metadata: Metadata = { title: "Set up your shop" };
+export const metadata: Metadata = { title: "Verify your shop" };
 
-/**
- * V1: a signed-in vendor with no shop yet (ShopGate sends them here), e.g. one who created the account at /sign-up and
- * left before the shop details. Only the shop step is left.
- */
+/** PRD V2–V3: business details and documents, then submit for admin review (ShopGate sends draft and rejected shops here). */
 export default function Page() {
-	return <SellerSetupWizard start="details" />;
+	return <OnboardingView />;
 }

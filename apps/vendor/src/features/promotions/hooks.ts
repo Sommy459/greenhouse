@@ -1,54 +1,58 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, errorMessage, getData } from "@/lib/api/client";
-import { downloadCsv } from "@/lib/api/download";
+import { api, errorMessage, getData, getPage } from "@/lib/api/client";
 import { backendRoutes } from "@/lib/routes";
 import { useToast } from "@/lib/use-toast";
-import type { Paginated } from "@/features/products/types";
-import type { PerformanceParams, Promotion, PromotionListParams, PromotionPerformance } from "@/features/promotions/types";
+import type { Promotion, PromotionAction, PromotionBody, PromotionState } from "@/features/promotions/types";
 
 const KEY = ["vendor", "promotions"];
 
-export function usePromotions(params: PromotionListParams) {
+export function usePromotions(params: { state?: PromotionState; page: number; limit: number }) {
 	return useQuery({
-		queryKey: [...KEY, params],
-		queryFn: () => getData<Paginated<Promotion>>(backendRoutes.PROMOTIONS, { ...params }),
+		queryKey: [...KEY, "list", params],
+		queryFn: () => getPage<Promotion>(backendRoutes.PROMOTIONS, { ...params }),
 		placeholderData: keepPreviousData,
 	});
 }
 
-/** Stop a promotion that hasn't ended: enrolled products go back to full price. */
-export function useCancelPromotion() {
+export function usePromotion(id: string) {
+	return useQuery({ queryKey: [...KEY, id], queryFn: () => getData<Promotion>(backendRoutes.PROMOTION(id)) });
+}
+
+/** Create (no id) or edit. Never retried. */
+export function useSavePromotion(id?: string) {
 	const toast = useToast();
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: async (promotion: Promotion) =>
-			(await api.post(backendRoutes.PROMOTION_CANCEL(promotion.id))).data.data as Promotion,
+		mutationFn: async (body: Partial<PromotionBody>) =>
+			(id ? await api.patch(backendRoutes.PROMOTION(id), body) : await api.post(backendRoutes.PROMOTIONS, body)).data
+				.data as Promotion,
 		retry: false,
 		onSuccess: (promotion) => {
-			toast.success(`${promotion.name} is cancelled`);
-			queryClient.invalidateQueries({ queryKey: KEY });
+			queryClient.setQueryData([...KEY, promotion.id], promotion);
+			queryClient.invalidateQueries({ queryKey: [...KEY, "list"] });
+			queryClient.invalidateQueries({ queryKey: ["vendor", "products"] });
+			toast.success(id ? "Promotion saved" : "Promotion created");
+		},
+		onError: (error) => toast.error(errorMessage(error, "Couldn't save the promotion. Try again.")),
+	});
+}
+
+const DONE: Record<PromotionAction, string> = { pause: "Promotion paused", resume: "Promotion resumed", end: "Promotion ended" };
+
+export function usePromotionAction() {
+	const toast = useToast();
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: async ({ id, action }: { id: string; action: PromotionAction }) =>
+			(await api.post(backendRoutes.PROMOTION_ACTION(id, action))).data.data as Promotion,
+		retry: false,
+		onSuccess: (promotion, { action }) => {
+			queryClient.setQueryData([...KEY, promotion.id], promotion);
+			queryClient.invalidateQueries({ queryKey: [...KEY, "list"] });
+			toast.success(DONE[action]);
 		},
 		onError: (error) => toast.error(errorMessage(error)),
-	});
-}
-
-/** Monitor Promotions: sales of each product in a promotion, and the totals above them. */
-export function usePromotionPerformance(params: PerformanceParams) {
-	return useQuery({
-		queryKey: [...KEY, "performance", params],
-		queryFn: () => getData<PromotionPerformance>(backendRoutes.PROMOTION_PERFORMANCE, { ...params }),
-		placeholderData: keepPreviousData,
-	});
-}
-
-export function useExportPerformance() {
-	const toast = useToast();
-	return useMutation({
-		mutationFn: (params: Omit<PerformanceParams, "page" | "limit"> & { ids?: string }) =>
-			downloadCsv(backendRoutes.PROMOTION_PERFORMANCE_EXPORT, params, "fysi-promotion-sales"),
-		retry: false,
-		onError: (error) => toast.error(errorMessage(error, "Couldn't export the promotion sales. Try again.")),
 	});
 }

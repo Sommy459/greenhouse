@@ -1,18 +1,12 @@
 import { z } from "zod";
 
-/** Nigerian mobile numbers: 080…, 070…, 090…, 081… (11 digits), or the same with +234 / 234 instead of the 0. */
-const NG_PHONE = /^(?:\+?234|0)[789][01]\d{8}$/;
-
-/** "Welcome to Fysi": one field that takes an email or a phone number, for both log in and sign up. */
+/** "Welcome to Fysi": the email to sign up with (the API signs up and signs in by email). */
 export const IdentifierSchema = z.object({
 	identifier: z
 		.string()
 		.trim()
-		.nonempty("Enter your email or phone number")
-		.refine(
-			(v) => z.email().safeParse(v).success || NG_PHONE.test(v.replace(/[\s-]/g, "")),
-			"Enter a valid email or phone number",
-		),
+		.nonempty("Enter your email")
+		.refine((v) => z.email().safeParse(v).success, "Enter a valid email"),
 });
 
 export type IdentifierValues = z.infer<typeof IdentifierSchema>;
@@ -27,14 +21,13 @@ export function normaliseIdentifier(value: string) {
 
 export const isEmailIdentifier = (value: string) => value.includes("@");
 
-/** The design shows four boxes. */
-export const CODE_LENGTH = 4;
+/** The API emails a 6-digit code. */
+export const CODE_LENGTH = 6;
 
-/** "Welcome back": email and password. `remember_me` asks the API for a 30-day session. */
+/** "Welcome back": email and password. */
 export const SignInSchema = z.object({
 	email: z.string().trim().nonempty("Enter your email").pipe(z.email("Enter a valid email")),
 	password: z.string().nonempty("Enter your password"),
-	remember_me: z.boolean(),
 });
 
 export type SignInValues = z.infer<typeof SignInSchema>;

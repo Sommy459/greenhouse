@@ -1,85 +1,57 @@
 "use client";
 
 import clsx from "clsx";
-import Image from "next/image";
-import { useEffect } from "react";
-import { Copy, ExternalLink, Package, X } from "lucide-react";
+import { useState } from "react";
+import { CircleAlert, ShieldCheck, Truck, X } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@repo/ui/dialog";
+import { Input } from "@repo/ui/input";
 import { Skeleton } from "@repo/ui/skeleton";
-import type { OpenSection } from "@/features/orders/components/OrdersTable";
-import { UpdateStatusPanel } from "@/features/orders/components/UpdateStatusPanel";
-import { useMyOrder } from "@/features/orders/hooks";
-import {
-	NEXT_STATUSES,
-	ORDER_STATUS_LABEL,
-	ORDER_STATUS_TONE,
-	PAYMENT_LABEL,
-	SHIPPING_METHOD_LABEL,
-} from "@/features/orders/options";
-import type { OrderDetail, TrackingStep } from "@/features/orders/types";
+import { useCancelOrder, useMyOrder, useUpdateOrderStatus } from "@/features/orders/hooks";
+import { day, ESCROW_LABEL, NEXT_STATUS, percent, STATUS_LABEL, STATUS_TONE } from "@/features/orders/options";
+import type { VendorOrder } from "@/features/orders/types";
 import { errorMessage } from "@/lib/api/client";
-import { naira } from "@/lib/format";
-import { explorerTxUrl, shortHash } from "@/lib/stellar";
-import { useToast } from "@/lib/use-toast";
-
-interface Props {
-	orderId: string | null;
-	/** Open scrolled to Order Tracking, or to Update status. */
-	section: OpenSection;
-	onClose: () => void;
-}
-
-const PAYOUT_LABEL = {
-	held: "Held in escrow",
-	released: "Released to your wallet",
-	refunded: "Refunded to the customer",
-} as const;
-
-const longDay = (iso: string) => {
-	const d = new Date(iso);
-	return `${d.getDate()} ${d.toLocaleString("en-GB", { month: "short" })}, ${d.getFullYear()}`;
-};
-const clock = (iso: string) =>
-	new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }).toLowerCase();
+import { price } from "@/lib/format";
 
 /**
- * Figma Vendor Hub "Order Details": who it goes to, Order Tracking (and Update status), the items and totals, and
- * payment, with the Stellar transaction, Fysi's commission and your payout (PRD). Over the order list.
+ * Figma "Order Details" (PRD V8): the items, the payout breakdown (subtotal, Fysi's commission, what reaches the
+ * wallet), escrow, the delivery address, any reported problem, and the next status. Before shipping, the vendor can
+ * cancel with a reason (POST /vendor/orders/:id/cancel); the customer is refunded.
  */
-export function OrderDetailsDialog({ orderId, section, onClose }: Props) {
-	const { data: order, isPending, isError, error, refetch } = useMyOrder(orderId);
-	const ready = !!order;
-
-	useEffect(() => {
-		// Scrolling the dialog is a DOM effect, not state: it runs once the order is on screen.
-		if (!ready || section === "details") return;
-		document.getElementById(section === "update" ? "order-update" : "order-tracking")?.scrollIntoView({ block: "start" });
-	}, [ready, section]);
+export function OrderDetailsDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+	const { data: order, isPending, isError, error, refetch } = useMyOrder(id);
 
 	return (
-		<Dialog open={!!orderId} onOpenChange={(open) => !open && onClose()}>
+		<Dialog open={!!id} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent
 				showCloseButton={false}
-				className="block max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl bg-white px-5 py-6 sm:max-w-[990px] sm:px-10 sm:py-10 lg:px-14 lg:pb-12"
+				className="block max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl bg-white px-5 py-6 sm:max-w-[720px] sm:px-9 sm:py-8"
 			>
-				<div className="flex items-center justify-between">
-					<DialogTitle className="text-2xl font-medium text-ink lg:text-[28px]">Order Details</DialogTitle>
+				<div className="flex items-start justify-between gap-4">
+					<div>
+						<DialogTitle className="text-2xl font-medium text-ink">Order {order?.orderNumber ?? ""}</DialogTitle>
+						<DialogDescription className="mt-1 text-sm text-grey-900">
+							{order?.paidAt ? `Paid ${day(order.paidAt)}` : "Loading…"}
+						</DialogDescription>
+					</div>
 					<DialogClose aria-label="Close" className="rounded-md p-1 text-ink hover:bg-grey-500">
 						<X className="size-6" />
 					</DialogClose>
 				</div>
-				<DialogDescription className="sr-only">Recipient, tracking, items, totals and payment for this order.</DialogDescription>
 
 				{isError ? (
-					<div className="py-16 text-center text-sm text-grey-900">
+					<div className="py-12 text-center text-sm text-grey-900">
 						<p>{errorMessage(error, "Couldn't load this order.")}</p>
 						<Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
 							Try again
 						</Button>
 					</div>
 				) : isPending || !order ? (
-					<DetailsSkeleton />
+					<div className="mt-6 space-y-3" aria-busy>
+						{Array.from({ length: 5 }, (_, i) => (
+							<Skeleton key={i} className="h-8 w-full" />
+						))}
+					</div>
 				) : (
 					<Details order={order} />
 				)}
@@ -88,272 +60,197 @@ export function OrderDetailsDialog({ orderId, section, onClose }: Props) {
 	);
 }
 
-function Details({ order }: { order: OrderDetail }) {
-	const r = order.recipient;
+function Details({ order }: { order: VendorOrder }) {
+	const a = order.deliveryAddress;
 	return (
-		<div className="animate-rise mt-8 grid gap-10 lg:mt-14 lg:grid-cols-2 lg:gap-[75px]">
-			<div className="min-w-0">
-				<div className="flex items-start justify-between gap-4">
-					<div>
-						<p className="text-lg font-semibold text-ink">Order ID: {order.number}</p>
-						<p className="mt-1 text-base text-grey-900">
-							Date ordered: <time dateTime={order.created_at}>{longDay(order.created_at)}</time>
-						</p>
-						<span
-							className={clsx("mt-2 inline-block rounded-full px-3 py-0.5 text-sm font-medium", ORDER_STATUS_TONE[order.status])}
-						>
-							{ORDER_STATUS_LABEL[order.status]}
-						</span>
-					</div>
-					<p className="text-lg font-semibold text-ink">{naira(order.total)}</p>
-				</div>
+		<div className="mt-6 space-y-6 text-sm text-ink">
+			<div className="flex flex-wrap items-center gap-2">
+				<span className={clsx("rounded-full px-3 py-1 text-xs font-medium", STATUS_TONE[order.status])}>
+					{STATUS_LABEL[order.status]}
+				</span>
+				<span className="text-grey-900">{ESCROW_LABEL[order.escrowStatus]}</span>
+			</div>
 
-				<dl className="mt-10 space-y-5 lg:mt-12">
-					<CopyRow label="Recipient name" value={r.name} />
-					<CopyRow label="Phone number" value={r.phone_number} />
-					<CopyRow label="E-mail Address" value={r.email} />
-					<CopyRow label="Shipping address" value={r.address} />
-					{order.shipment && (
-						<CopyRow label={`Tracking number (${order.shipment.courier})`} value={order.shipment.tracking_number} />
-					)}
+			{order.problemReason && (
+				<p role="alert" className="flex gap-2 rounded-lg border border-error-500 bg-error-50 p-3">
+					<CircleAlert className="size-5 shrink-0 text-error-500" aria-hidden />
+					<span>
+						<strong className="font-semibold">The customer reported a problem:</strong> {order.problemReason}
+						<span className="mt-1 block text-grey-900">Your payout is on hold while Fysi looks into it.</span>
+					</span>
+				</p>
+			)}
+
+			<section aria-label="Items">
+				<ul className="divide-y divide-grey-600 rounded-lg border border-grey-600">
+					{order.lines.map((l) => (
+						<li key={l.productId} className="flex justify-between gap-4 px-4 py-3">
+							<span className="min-w-0">
+								{l.title} <span className="text-grey-800">× {l.quantity}</span>
+							</span>
+							<span className="shrink-0">{price(l.lineTotal)}</span>
+						</li>
+					))}
+				</ul>
+				<dl className="mt-3 space-y-1.5 [&>div]:flex [&>div]:justify-between">
+					<div>
+						<dt>Subtotal</dt>
+						<dd>{price(order.subtotal)}</dd>
+					</div>
+					<div>
+						<dt>Fysi commission ({percent(order.commissionBps)})</dt>
+						<dd>{order.commission.cents === 0 ? "Waived" : `−${price(order.commission)}`}</dd>
+					</div>
+					<div className="border-t border-grey-600 pt-2 text-base font-semibold">
+						<dt>Your payout</dt>
+						<dd>{price(order.payout)}</dd>
+					</div>
 				</dl>
-				{order.cancel_reason && (
-					<p className="mt-5 rounded-md bg-error-50 px-4 py-3 text-sm text-error-700">
-						<span className="font-medium">Cancelled:</span> {order.cancel_reason}
+				<p className="mt-2 flex gap-2 text-xs text-grey-900">
+					<ShieldCheck className="size-4 shrink-0 text-primary-500" aria-hidden />
+					{order.escrowStatus === "held"
+						? order.autoReleaseAt
+							? `Held in escrow: released when the customer confirms delivery, or automatically on ${day(order.autoReleaseAt)}.`
+							: "Held in escrow until the customer confirms delivery (or 7 days after you ship)."
+						: ESCROW_LABEL[order.escrowStatus]}
+				</p>
+			</section>
+
+			<section aria-label="Delivery">
+				<h3 className="text-base font-semibold">Deliver to</h3>
+				<p className="mt-1 text-grey-900">
+					{a.recipientName} · {a.phone}
+					<br />
+					{a.line1}
+					{a.line2 && `, ${a.line2}`}, {a.city}, {a.state}
+					{a.notes && <span className="mt-1 block italic">“{a.notes}”</span>}
+				</p>
+				{order.trackingNumber && (
+					<p className="mt-2 flex items-center gap-2">
+						<Truck className="size-4 text-primary-500" aria-hidden />
+						{order.carrier ?? "Courier"} · <span className="font-mono">{order.trackingNumber}</span>
+						{order.shippedAt && <span className="text-grey-800">· shipped {day(order.shippedAt)}</span>}
 					</p>
 				)}
+			</section>
 
-				<section id="order-tracking" aria-labelledby="order-tracking-title" className="mt-10 scroll-mt-4">
-					<h3 id="order-tracking-title" className="text-lg font-semibold text-ink">
-						Order Tracking
-					</h3>
-					<Tracking steps={order.tracking} placed={order.created_at} />
-				</section>
+			{order.status === "cancelled" && order.cancelReason && (
+				<p className="rounded-lg border border-grey-600 bg-grey-500 p-3">
+					<strong className="font-semibold">Cancelled:</strong> {order.cancelReason}
+				</p>
+			)}
 
-				{NEXT_STATUSES[order.status].length > 0 && (
-					<section id="order-update" aria-labelledby="order-update-title" className="mt-10 scroll-mt-4">
-						<h3 id="order-update-title" className="text-lg font-semibold text-ink">
-							Update status
-						</h3>
-						{/* Keyed on the status so a saved change starts the next step fresh. */}
-						<UpdateStatusPanel key={order.status} order={order} />
-					</section>
-				)}
-			</div>
-
-			<div className="min-w-0">
-				<section aria-labelledby="order-items-title">
-					<h3 id="order-items-title" className="text-lg font-semibold text-ink">
-						Order List ({order.items.length} item{order.items.length === 1 ? "" : "s"})
-					</h3>
-					<ul className="mt-4 space-y-4">
-						{order.items.map((item) => (
-							<li key={item.id} className="flex gap-4">
-								<span className="relative grid size-[72px] shrink-0 place-items-center overflow-hidden rounded-md bg-grey-500">
-									{item.image_url ? (
-										<Image src={item.image_url} alt="" fill sizes="72px" className="object-cover" />
-									) : (
-										<Package className="size-6 text-grey-700" aria-hidden />
-									)}
-								</span>
-								<div className="min-w-0 flex-1">
-									<p className="text-base text-ink">{item.name}</p>
-									<p className="mt-1 text-xs font-medium text-success-500">
-										{item.quantity} Pcs{item.quantity > 1 ? ` × ${naira(item.price)}` : ""}
-									</p>
-								</div>
-								<p className="text-base font-semibold text-ink">{naira(item.price * item.quantity)}</p>
-							</li>
-						))}
-					</ul>
-
-					<dl className="mt-8 space-y-3 text-base text-ink [&>div]:flex [&>div]:justify-between [&>div]:gap-4">
-						<div>
-							<dt>Subtotal</dt>
-							<dd>{naira(order.subtotal)}</dd>
-						</div>
-						<div>
-							<dt>VAT ({order.vat_rate}%)</dt>
-							<dd>{naira(order.vat)}</dd>
-						</div>
-						<div>
-							<dt>Shipping Rate</dt>
-							<dd>{order.shipping === 0 ? "Free" : naira(order.shipping, 2)}</dd>
-						</div>
-						<div className="pt-1 text-lg font-semibold">
-							<dt>Grand Total</dt>
-							<dd>{naira(order.total, 2)}</dd>
-						</div>
-					</dl>
-				</section>
-
-				<section aria-labelledby="order-payment-title" className="mt-10">
-					<h3 id="order-payment-title" className="text-lg font-semibold text-ink">
-						Payment
-					</h3>
-					<dl className="mt-4 space-y-3 text-base text-ink [&>div]:flex [&>div]:justify-between [&>div]:gap-4">
-						<div>
-							<dt>Payment Method</dt>
-							<dd>{PAYMENT_LABEL[order.payment_method]}</dd>
-						</div>
-						<div>
-							<dt>Shipping Method</dt>
-							<dd>{SHIPPING_METHOD_LABEL[order.shipping_method]}</dd>
-						</div>
-						<div>
-							<dt>Transaction</dt>
-							<dd>
-								<a
-									href={explorerTxUrl(order.payment.tx_hash, order.payment.network)}
-									target="_blank"
-									rel="noreferrer"
-									className="inline-flex items-center gap-1 font-mono text-sm text-primary-500 hover:underline"
-									title={`View on Stellar Expert (${order.payment.network})`}
-								>
-									{shortHash(order.payment.tx_hash)}
-									<ExternalLink className="size-4" aria-hidden />
-									<span className="sr-only">(opens Stellar Expert)</span>
-								</a>
-							</dd>
-						</div>
-					</dl>
-				</section>
-
-				<section aria-labelledby="order-payout-title" className="mt-10">
-					<h3 id="order-payout-title" className="text-lg font-semibold text-ink">
-						Your Payout
-					</h3>
-					<dl className="mt-4 space-y-3 text-base text-ink [&>div]:flex [&>div]:justify-between [&>div]:gap-4">
-						<div>
-							<dt>Order total</dt>
-							<dd>{naira(order.total, 2)}</dd>
-						</div>
-						<div>
-							<dt>Fysi commission ({order.commission_rate}%)</dt>
-							<dd>{order.commission === 0 ? "Waived" : `−${naira(order.commission, 2)}`}</dd>
-						</div>
-						<div className="pt-1 text-lg font-semibold">
-							<dt>You receive</dt>
-							<dd>{naira(order.payout, 2)}</dd>
-						</div>
-						<div className="text-sm text-grey-900">
-							<dt className="sr-only">Payout status</dt>
-							<dd className="w-full text-right">{PAYOUT_LABEL[order.payout_status]}</dd>
-						</div>
-					</dl>
-				</section>
-			</div>
+			<NextStep order={order} />
+			{order.canCancel && <CancelOrder id={order.id} />}
 		</div>
 	);
 }
 
-/** A label and value with a copy button (Figma). */
-function CopyRow({ label, value }: { label: string; value: string }) {
-	const toast = useToast();
-	const copy = async () => {
-		try {
-			await navigator.clipboard.writeText(value);
-			toast.success(`${label} copied`);
-		} catch {
-			toast.error("Couldn't copy. Select the text instead.");
-		}
-	};
+function NextStep({ order }: { order: VendorOrder }) {
+	const next = NEXT_STATUS[order.status];
+	const update = useUpdateOrderStatus(order.id);
+	const [carrier, setCarrier] = useState("");
+	const [tracking, setTracking] = useState("");
+	const [problem, setProblem] = useState<string | null>(null);
+
+	if (!next) return null;
 
 	return (
-		<div className="flex items-start justify-between gap-4">
-			<div className="min-w-0">
-				<dt className="text-sm text-grey-900">{label}</dt>
-				<dd className="mt-0.5 text-base break-words text-ink">{value}</dd>
-			</div>
-			<button
-				type="button"
-				onClick={copy}
-				aria-label={`Copy ${label.toLowerCase()}`}
-				className="mt-1 shrink-0 rounded-md p-1.5 text-grey-800 transition-colors hover:bg-grey-500 hover:text-ink"
-			>
-				<Copy className="size-5" />
-			</button>
-		</div>
-	);
-}
-
-/** Figma timeline: green dots and line for steps done (with the time), grey for what's to come ("From …"). */
-function Tracking({ steps, placed }: { steps: TrackingStep[]; placed: string }) {
-	const sameDay = (iso: string) => new Date(iso).toDateString() === new Date(placed).toDateString();
-	const when = (iso: string) => (sameDay(iso) ? clock(iso) : `${longDay(iso)}, ${clock(iso)}`);
-
-	return (
-		<ol className="mt-5">
-			{steps.map((step, i) => {
-				const last = i === steps.length - 1;
-				const nextDone = steps[i + 1]?.state === "done";
-				return (
-					<li key={`${step.label}-${i}`} className="relative flex gap-4 pb-7 last:pb-0">
-						{!last && (
-							<span
-								aria-hidden
-								className={clsx(
-									"absolute top-5 left-[9px] h-[calc(100%-12px)] w-0.5",
-									step.state === "done" && nextDone ? "bg-success-500" : "bg-grey-600",
-								)}
-							/>
-						)}
-						<span
-							aria-hidden
-							className={clsx(
-								"relative mt-0.5 size-5 shrink-0 rounded-full",
-								step.state === "done" ? "bg-success-500" : step.state === "stopped" ? "bg-error-500" : "bg-grey-700",
-							)}
-						/>
-						<div>
-							<p
-								className={clsx(
-									"text-base",
-									step.state === "upcoming" ? "text-grey-900" : step.state === "stopped" ? "text-error-500" : "text-ink",
-								)}
-							>
-								{step.label}
-								<span className="sr-only">
-									{step.state === "done" ? " (done)" : step.state === "stopped" ? " (stopped)" : " (to come)"}
-								</span>
-							</p>
-							{step.at && (
-								<p
-									className={clsx(
-										"mt-0.5 text-xs",
-										step.state === "done"
-											? "font-medium text-success-500"
-											: step.state === "stopped"
-												? "text-error-500"
-												: "text-grey-900",
-									)}
-								>
-									{step.state === "upcoming" ? `From ${when(step.at)}` : when(step.at)}
-								</p>
-							)}
-						</div>
-					</li>
+		<form
+			noValidate
+			className="rounded-lg border border-primary-500 bg-primary-50 p-4"
+			onSubmit={(e) => {
+				e.preventDefault();
+				if (next === "shipped" && (!carrier.trim() || !tracking.trim()))
+					return setProblem("Enter the courier and tracking number");
+				setProblem(null);
+				update.mutate(
+					next === "shipped" ? { status: next, carrier: carrier.trim(), trackingNumber: tracking.trim() } : { status: next },
 				);
-			})}
-		</ol>
+			}}
+		>
+			<h3 className="text-base font-semibold">
+				{next === "processing" ? "Start processing" : next === "shipped" ? "Mark as shipped" : "Mark as delivered"}
+			</h3>
+			<p className="mt-1 text-xs text-grey-900">
+				{next === "processing"
+					? "Let the customer know you're packing it."
+					: next === "shipped"
+						? "The customer is emailed the tracking number, and the 7-day escrow timer starts."
+						: "When the courier has delivered it. You're paid when the customer confirms, or when the timer ends."}
+			</p>
+			{next === "shipped" && (
+				<div className="mt-3 grid gap-3 sm:grid-cols-2">
+					<Input
+						value={carrier}
+						onChange={(e) => setCarrier(e.target.value)}
+						placeholder="Courier, e.g. GIG Logistics"
+						aria-label="Courier"
+						className="h-11 bg-white"
+					/>
+					<Input
+						value={tracking}
+						onChange={(e) => setTracking(e.target.value)}
+						placeholder="Tracking number"
+						aria-label="Tracking number"
+						className="h-11 bg-white"
+					/>
+				</div>
+			)}
+			{problem && <p className="mt-2 text-sm text-error-500">{problem}</p>}
+			<Button type="submit" isLoading={update.isPending} className="mt-3 h-11">
+				{next === "processing" ? "Start processing" : next === "shipped" ? "Mark as shipped" : "Mark as delivered"}
+			</Button>
+		</form>
 	);
 }
 
-function DetailsSkeleton() {
+function CancelOrder({ id }: { id: string }) {
+	const cancel = useCancelOrder(id);
+	const [open, setOpen] = useState(false);
+	const [reason, setReason] = useState("");
+	const [problem, setProblem] = useState<string | null>(null);
+
+	if (!open) {
+		return (
+			<button type="button" onClick={() => setOpen(true)} className="text-sm font-medium text-error-500 hover:underline">
+				Cancel this order
+			</button>
+		);
+	}
 	return (
-		<div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-[75px]" aria-busy aria-label="Loading order">
-			<div className="space-y-5">
-				<Skeleton className="h-12 w-full" />
-				{Array.from({ length: 4 }, (_, i) => (
-					<Skeleton key={i} className="h-10 w-full" />
-				))}
-				<Skeleton className="h-48 w-full" />
+		<form
+			noValidate
+			className="rounded-lg border border-error-500 bg-error-50 p-4"
+			onSubmit={(e) => {
+				e.preventDefault();
+				if (reason.trim().length < 3) return setProblem("Tell the customer why");
+				setProblem(null);
+				cancel.mutate(reason.trim());
+			}}
+		>
+			<h3 className="text-base font-semibold">Cancel this order</h3>
+			<p className="mt-1 text-xs text-grey-900">
+				The customer sees your reason and is refunded in full. This can&apos;t be undone.
+			</p>
+			<textarea
+				value={reason}
+				onChange={(e) => setReason(e.target.value)}
+				rows={3}
+				maxLength={500}
+				placeholder="e.g. Out of stock"
+				aria-label="Reason"
+				className="mt-3 w-full rounded-lg border border-grey-600 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500"
+			/>
+			{problem && <p className="mt-1 text-sm text-error-500">{problem}</p>}
+			<div className="mt-3 flex gap-3">
+				<Button type="submit" variant="destructive" isLoading={cancel.isPending} className="h-11">
+					Cancel order
+				</Button>
+				<Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-11">
+					Keep it
+				</Button>
 			</div>
-			<div className="space-y-4">
-				<Skeleton className="h-24 w-full" />
-				<Skeleton className="h-24 w-full" />
-				<Skeleton className="h-36 w-full" />
-			</div>
-		</div>
+		</form>
 	);
 }

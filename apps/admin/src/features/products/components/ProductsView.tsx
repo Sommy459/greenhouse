@@ -1,134 +1,142 @@
 "use client";
 
-import Link from "next/link";
-import { ListFilter, Plus } from "lucide-react";
-import { Button } from "@repo/ui/button";
+import clsx from "clsx";
+import Image from "next/image";
+import { useState } from "react";
+import { Eye, EyeOff, Leaf, Pencil, Plus, Trash2 } from "lucide-react";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuTrigger,
-} from "@repo/ui/dropdown-menu";
-import { DateRangePicker } from "@/components/DateRangePicker";
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@repo/ui/alert-dialog";
+import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/checkbox";
+import { Input } from "@repo/ui/input";
+import { Skeleton } from "@repo/ui/skeleton";
+import { Textarea } from "@repo/ui/textarea";
+import { ExportButton } from "@/components/ExportButton";
+import { ProductDialog } from "@/features/products/components/ProductDialog";
+import { ListHeader } from "@/components/ListHeader";
 import { Pagination } from "@/components/Pagination";
 import { SearchBox } from "@/components/SearchBox";
-import { AdminProductCard, AdminProductCardSkeleton } from "@/features/products/components/AdminProductCard";
-import { NewCategoryDialog } from "@/features/products/components/NewCategoryDialog";
-import { useAdminProducts } from "@/features/products/hooks";
-import { PRODUCT_VISIBILITIES, type ProductSort, type ProductVisibility } from "@/features/products/types";
-import { StatusFilter } from "@/components/StatusFilter";
-import { consoleRoutes } from "@/lib/routes";
+import {
+	useAdminCategories,
+	useAdminProducts,
+	useCreateCategory,
+	useModerateProduct,
+	useUpdateCategory,
+} from "@/features/products/hooks";
+import type { AdminCategory, AdminProduct, ModerationStatus } from "@/features/products/types";
+import { count, price } from "@/lib/format";
 import { useUrlParams } from "@/lib/use-url-params";
 
-const PAGE_SIZE = 9;
-const SORTS: { value: ProductSort; label: string }[] = [
-	{ value: "newest", label: "Newest" },
-	{ value: "best_selling", label: "Best selling" },
-	{ value: "price_low", label: "Price: low to high" },
-	{ value: "price_high", label: "Price: high to low" },
-];
-const VISIBILITY_LABEL: Record<ProductVisibility, string> = { visible: "Visible in store", hidden: "Hidden" };
-const ACTION =
-	"inline-flex h-10 items-center gap-2 rounded-lg bg-primary-500 px-4 text-sm font-semibold text-white transition-all duration-300 ease-spring hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-lg active:translate-y-0 active:scale-95 motion-reduce:hover:translate-y-0 lg:h-12 lg:text-base";
-const OUTLINE =
-	"inline-flex h-10 items-center gap-2 rounded-lg border border-grey-600 bg-white px-3 text-sm font-semibold text-ink transition-colors hover:border-primary-500 lg:h-12";
+const PAGE_SIZE = 12;
+const TH = "px-3 py-4 text-left text-sm font-medium whitespace-nowrap text-ink";
+const MODERATION_LABEL: Record<ModerationStatus, string> = { visible: "Visible", hidden: "Hidden by Fysi", removed: "Removed" };
+const MODERATION_TONE: Record<ModerationStatus, string> = {
+	visible: "bg-success-50 text-success-700",
+	hidden: "bg-warning-50 text-warning-700",
+	removed: "bg-error-50 text-error-500",
+};
 
-/** Search, sort, dates and page live in the URL, so a refresh or a shared link shows the same list. */
-function useProductParams() {
-	const { get, list, page, set } = useUrlParams();
-	const sort = SORTS.some((s) => s.value === get("sort")) ? (get("sort") as ProductSort) : "newest";
-	const visibility = list("visibility", PRODUCT_VISIBILITIES);
-	return { search: get("search"), sort, page, from: get("from"), to: get("to"), visibility, set };
-}
-
-/** Figma admin "Product": every product on the platform as cards, with search, dates, visibility, sort and pages. */
+/** PRD A5: moderate the catalogue (hide, unhide, remove with a reason the vendor sees) and manage categories. */
 export function ProductsView() {
-	const { search, sort, page, from, to, visibility, set } = useProductParams();
-	const { data, isPending, isError, isFetching, refetch } = useAdminProducts({
-		search: search || undefined,
-		sort,
-		page,
-		limit: PAGE_SIZE,
-		from: from || undefined,
-		to: to || undefined,
-		visibility: visibility.join(",") || undefined,
-	});
-	const products = data?.items ?? [];
-	const total = data?.meta.total ?? 0;
-	const filtered = !!(search || from || to || visibility.length);
+	const { get, set } = useUrlParams();
+	const tab = get("tab") === "categories" ? "categories" : "products";
+	const [editing, setEditing] = useState<AdminProduct | "new" | null>(null);
 
 	return (
 		<div className="px-4 py-6 lg:px-8 lg:py-7">
-			<div className="flex flex-wrap items-start justify-between gap-4">
-				<div className="animate-rise">
-					<h1 className="text-2xl font-medium text-ink lg:text-[28px]">Product</h1>
-					<p className="mt-1 text-sm text-ink" aria-live="polite">
-						{filtered ? `Showing ${total} matching product${total === 1 ? "" : "s"}` : "Showing All Products"}
-					</p>
+			<ListHeader title="Products" crumb="Products">
+				<div className="flex flex-wrap gap-3">
+					<ExportButton kind="products" />
+					<Button onClick={() => setEditing("new")} className="h-12 gap-2 rounded-lg px-5">
+						<Plus className="size-5" aria-hidden /> Add product
+					</Button>
 				</div>
-				<div className="animate-rise flex flex-wrap gap-3 lg:gap-4" style={{ "--i": 1 } as React.CSSProperties}>
-					<NewCategoryDialog triggerClassName={ACTION} />
-					<Link href={consoleRoutes.NEW_PRODUCT} className={ACTION}>
-						<Plus className="size-5" aria-hidden /> Add Product
-					</Link>
-				</div>
+			</ListHeader>
+			<div role="tablist" aria-label="Catalogue" className="mt-8 flex border-b border-grey-600">
+				{(["products", "categories"] as const).map((t) => (
+					<button
+						key={t}
+						type="button"
+						role="tab"
+						aria-selected={tab === t}
+						onClick={() => set({ tab: t === "products" ? undefined : t })}
+						className={clsx(
+							"-mb-px border-b-2 px-5 pb-3 text-base capitalize transition-colors",
+							tab === t ? "border-primary-500 text-primary-500" : "border-transparent text-grey-800 hover:text-primary-500",
+						)}
+					>
+						{t}
+					</button>
+				))}
 			</div>
+			{tab === "products" ? <Products onEdit={setEditing} /> : <Categories />}
+			<ProductDialog product={editing} onClose={() => setEditing(null)} />
+		</div>
+	);
+}
 
-			<div
-				className="animate-rise mt-5 flex flex-wrap items-center justify-between gap-3"
-				style={{ "--i": 2 } as React.CSSProperties}
-			>
+function Products({ onEdit }: { onEdit: (product: AdminProduct) => void }) {
+	const { get, page, set } = useUrlParams();
+	const q = get("search");
+	const vendorId = get("vendor") || undefined;
+	const moderation = (["visible", "hidden", "removed"] as const).find((m) => m === get("moderation"));
+	const includeDeleted = get("deleted") === "1";
+	const { data, isPending, isError, isFetching, refetch } = useAdminProducts({
+		q: q || undefined,
+		vendorId,
+		moderationStatus: moderation,
+		includeDeleted: includeDeleted || undefined,
+		page,
+		limit: PAGE_SIZE,
+	});
+	const moderate = useModerateProduct();
+	const [acting, setActing] = useState<{ product: AdminProduct; action: "hide" | "remove" } | null>(null);
+	const products = data?.items ?? [];
+
+	return (
+		<>
+			<div className="mt-6 flex flex-wrap items-center gap-3">
 				<SearchBox
-					value={search}
-					onChange={(value) => set({ search: value || undefined })}
-					placeholder="search category"
-					label="Search products or categories"
-					className="max-w-[340px]"
+					value={q}
+					onChange={(v) => set({ search: v || undefined })}
+					placeholder="Product name"
+					label="Search products"
+					className="w-full sm:w-72"
 				/>
-				<div className="flex gap-2">
-					<DateRangePicker
-						from={from}
-						to={to}
-						onApply={(range) => set(range)}
-						title="Date added"
-						triggerClassName={`${OUTLINE} px-4`}
-					/>
-					<StatusFilter
-						id="product-visibility"
-						options={PRODUCT_VISIBILITIES}
-						labels={VISIBILITY_LABEL}
-						value={visibility}
-						onChange={(next) => set({ visibility: next.join(",") || undefined })}
-						legend="Visibility"
-						variant="sliders"
-						triggerClassName={`${OUTLINE} px-4`}
-					/>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<button type="button" aria-label="Sort products" className={OUTLINE}>
-								<ListFilter className="size-5" />
-							</button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-52">
-							<DropdownMenuLabel>Sort by</DropdownMenuLabel>
-							<DropdownMenuRadioGroup
-								value={sort}
-								onValueChange={(value) => set({ sort: value === "newest" ? undefined : value })}
-							>
-								{SORTS.map((s) => (
-									<DropdownMenuRadioItem key={s.value} value={s.value}>
-										{s.label}
-									</DropdownMenuRadioItem>
-								))}
-							</DropdownMenuRadioGroup>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
+				<select
+					value={moderation ?? ""}
+					onChange={(e) => set({ moderation: e.target.value || undefined })}
+					aria-label="Moderation"
+					className="h-11 rounded-lg border border-grey-600 bg-white px-3 text-sm text-ink"
+				>
+					<option value="">All</option>
+					<option value="visible">Visible</option>
+					<option value="hidden">Hidden by Fysi</option>
+					<option value="removed">Removed</option>
+				</select>
+				<label className="flex items-center gap-2 text-sm text-ink">
+					<Checkbox checked={includeDeleted} onCheckedChange={(on) => set({ deleted: on ? "1" : undefined })} />
+					Include deleted by vendor
+				</label>
+				{vendorId && (
+					<button
+						type="button"
+						onClick={() => set({ vendor: undefined })}
+						className="rounded-full bg-primary-50 px-3 py-1 text-sm text-primary-500 hover:underline"
+					>
+						One vendor only ×
+					</button>
+				)}
 			</div>
 
-			<div className="mt-6">
+			<div className={clsx("mt-6 transition-opacity", isFetching && !isPending && "opacity-60")}>
 				{isError ? (
 					<div className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
 						<p>Couldn&apos;t load products.</p>
@@ -137,47 +145,281 @@ export function ProductsView() {
 						</Button>
 					</div>
 				) : !isPending && products.length === 0 ? (
-					<div className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
-						<p>{filtered ? "No products match." : "No products yet."}</p>
-						{filtered && (
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => set({ search: undefined, from: undefined, to: undefined, visibility: undefined })}
-								className="mt-4"
-							>
-								Clear search and filters
-							</Button>
+					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">No products here.</p>
+				) : (
+					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
+						<div className="overflow-x-auto">
+							<table className="w-full min-w-[960px]">
+								<thead className="border-b border-grey-600 bg-grey-500">
+									<tr>
+										{["Product", "Vendor", "Price", "Stock", "Category", "Moderation", ""].map((h, i) => (
+											<th key={h || i} scope="col" className={clsx(TH, i === 0 && "pl-6")}>
+												{h}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-grey-600">
+									{isPending
+										? Array.from({ length: 6 }, (_, i) => (
+												<tr key={i}>
+													<td colSpan={7} className="px-6 py-3">
+														<Skeleton className="h-12 w-full" />
+													</td>
+												</tr>
+											))
+										: products.map((p) => {
+												const cover = [...p.images].sort((a, b) => a.position - b.position)[0]?.url;
+												return (
+													<tr key={p.id} className="hover:bg-grey-500">
+														<td className="py-3 pr-3 pl-6">
+															<div className="flex items-center gap-3">
+																<span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-grey-600">
+																	{cover ? (
+																		<Image src={cover} alt="" fill unoptimized sizes="48px" className="object-cover" />
+																	) : (
+																		<Leaf className="size-5 text-grey-700" aria-hidden />
+																	)}
+																</span>
+																<span className="min-w-0">
+																	<span className="block max-w-64 truncate text-sm font-medium text-ink">{p.title}</span>
+																	{p.deletedAt && <span className="text-xs text-grey-800">Deleted by vendor</span>}
+																	{p.moderationReason && p.moderationStatus !== "visible" && (
+																		<span className="block max-w-64 truncate text-xs text-grey-800" title={p.moderationReason}>
+																			“{p.moderationReason}”
+																		</span>
+																	)}
+																</span>
+															</div>
+														</td>
+														<td className="px-3 py-3 text-sm text-ink">{p.vendorName ?? "—"}</td>
+														<td className="px-3 py-3 text-sm whitespace-nowrap text-ink">{price(p.price)}</td>
+														<td className="px-3 py-3 text-sm text-ink">{count(p.stock)}</td>
+														<td className="px-3 py-3 text-sm text-ink">{p.category?.name ?? "—"}</td>
+														<td className="px-3 py-3">
+															<span
+																className={clsx(
+																	"rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap",
+																	MODERATION_TONE[p.moderationStatus],
+																)}
+															>
+																{MODERATION_LABEL[p.moderationStatus]}
+															</span>
+														</td>
+														<td className="py-3 pr-6 pl-3">
+															<div className="flex justify-end gap-1">
+																{!p.deletedAt && p.moderationStatus !== "removed" && (
+																	<button
+																		type="button"
+																		onClick={() => onEdit(p)}
+																		aria-label={`Edit ${p.title}`}
+																		className="grid size-9 place-items-center rounded-md hover:bg-grey-500 hover:text-primary-500"
+																	>
+																		<Pencil className="size-4" />
+																	</button>
+																)}
+																{p.moderationStatus === "visible" && (
+																	<button
+																		type="button"
+																		onClick={() => setActing({ product: p, action: "hide" })}
+																		aria-label={`Hide ${p.title}`}
+																		className="grid size-9 place-items-center rounded-md hover:bg-grey-500 hover:text-primary-500"
+																	>
+																		<EyeOff className="size-4" />
+																	</button>
+																)}
+																{p.moderationStatus === "hidden" && (
+																	<button
+																		type="button"
+																		onClick={() => moderate.mutate({ product: p, moderation: { action: "unhide" } })}
+																		disabled={moderate.isPending}
+																		aria-label={`Show ${p.title} again`}
+																		className="grid size-9 place-items-center rounded-md hover:bg-grey-500 hover:text-primary-500"
+																	>
+																		<Eye className="size-4" />
+																	</button>
+																)}
+																{p.moderationStatus !== "removed" && (
+																	<button
+																		type="button"
+																		onClick={() => setActing({ product: p, action: "remove" })}
+																		aria-label={`Remove ${p.title}`}
+																		className="grid size-9 place-items-center rounded-md hover:bg-error-50 hover:text-error-500"
+																	>
+																		<Trash2 className="size-4" />
+																	</button>
+																)}
+															</div>
+														</td>
+													</tr>
+												);
+											})}
+								</tbody>
+							</table>
+						</div>
+						{data && data.meta.total_pages > 1 && (
+							<div className="border-t border-grey-600">
+								<Pagination
+									page={data.meta.page}
+									totalPages={data.meta.total_pages}
+									onChange={(n) => set({ page: n > 1 ? String(n) : undefined })}
+								/>
+							</div>
 						)}
 					</div>
-				) : (
-					<ul
-						className={`grid gap-4 transition-opacity md:grid-cols-2 xl:grid-cols-3 xl:gap-5 ${isFetching && !isPending ? "opacity-60" : ""}`}
-					>
-						{isPending
-							? Array.from({ length: PAGE_SIZE }, (_, i) => (
-									<li key={i}>
-										<AdminProductCardSkeleton />
-									</li>
-								))
-							: products.map((product, i) => (
-									<li key={product.id} className="animate-rise" style={{ "--i": i % 3 } as React.CSSProperties}>
-										<AdminProductCard product={product} />
-									</li>
-								))}
-					</ul>
 				)}
 			</div>
 
-			{data && data.meta.total_pages > 1 && (
-				<div className="mt-6">
-					<Pagination
-						page={data.meta.page}
-						totalPages={data.meta.total_pages}
-						onChange={(n) => set({ page: n > 1 ? String(n) : undefined })}
-					/>
+			<ModerationDialog key={acting?.product.id ?? "none"} acting={acting} onClose={() => setActing(null)} />
+		</>
+	);
+}
+
+function ModerationDialog({
+	acting,
+	onClose,
+}: {
+	acting: { product: AdminProduct; action: "hide" | "remove" } | null;
+	onClose: () => void;
+}) {
+	const moderate = useModerateProduct();
+	const [reason, setReason] = useState("");
+	const ok = reason.trim().length >= 10;
+	return (
+		<AlertDialog open={!!acting} onOpenChange={(open) => !open && !moderate.isPending && onClose()}>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>
+						{acting?.action === "remove" ? `Remove ${acting.product.title}?` : `Hide ${acting?.product.title} from the store?`}
+					</AlertDialogTitle>
+					<AlertDialogDescription>
+						{acting?.action === "remove"
+							? "It comes off the store for good. Paid orders for it still need delivering."
+							: "Customers stop seeing it; the vendor sees your reason and can fix it. You can show it again later."}
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<label htmlFor="moderation-reason" className="text-sm font-medium text-ink">
+					Reason (the vendor sees it)
+				</label>
+				<Textarea
+					id="moderation-reason"
+					value={reason}
+					onChange={(e) => setReason(e.target.value)}
+					rows={3}
+					placeholder="e.g. The eco claim isn't backed by a certificate."
+				/>
+				<AlertDialogFooter>
+					<AlertDialogCancel disabled={moderate.isPending}>Cancel</AlertDialogCancel>
+					<Button
+						disabled={!ok || moderate.isPending || !acting}
+						isLoading={moderate.isPending}
+						className="bg-error-500 hover:bg-error-700"
+						onClick={() =>
+							acting &&
+							moderate.mutate(
+								{ product: acting.product, moderation: { action: acting.action, reason: reason.trim() } },
+								{ onSuccess: onClose },
+							)
+						}
+					>
+						{acting?.action === "remove" ? "Remove" : "Hide"}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
+}
+
+function Categories() {
+	const { data, isPending, isError, refetch } = useAdminCategories();
+	const create = useCreateCategory();
+	const [name, setName] = useState("");
+	const categories = [...(data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+
+	return (
+		<div className="mt-6 space-y-6">
+			<form
+				noValidate
+				className="flex flex-wrap items-end gap-3 rounded-xl border border-grey-600 bg-white p-5"
+				onSubmit={(e) => {
+					e.preventDefault();
+					if (name.trim())
+						create.mutate({ name: name.trim(), sortOrder: categories.length + 1 }, { onSuccess: () => setName("") });
+				}}
+			>
+				<label className="grid flex-1 gap-1.5">
+					<span className="text-sm font-medium text-ink">New category</span>
+					<Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Baby and kids" className="h-11" />
+				</label>
+				<Button type="submit" isLoading={create.isPending} disabled={!name.trim()} className="h-11 gap-2">
+					<Plus className="size-4" aria-hidden /> Add
+				</Button>
+			</form>
+
+			{isError ? (
+				<div className="rounded-xl border border-grey-600 bg-white py-12 text-center text-sm text-grey-900">
+					<p>Couldn&apos;t load categories.</p>
+					<Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
+						Try again
+					</Button>
 				</div>
+			) : isPending ? (
+				<Skeleton className="h-64 rounded-xl" />
+			) : (
+				<ul className="divide-y divide-grey-600 rounded-xl border border-grey-600 bg-white">
+					{categories.map((c) => (
+						<CategoryRow key={`${c.id}-${c.name}-${c.isActive}-${c.sortOrder}`} category={c} />
+					))}
+				</ul>
 			)}
 		</div>
+	);
+}
+
+function CategoryRow({ category: c }: { category: AdminCategory }) {
+	const update = useUpdateCategory();
+	const [name, setName] = useState(c.name);
+	const [order, setOrder] = useState(String(c.sortOrder));
+	const changed = name.trim() !== c.name || Number(order) !== c.sortOrder;
+	return (
+		<li className="flex flex-wrap items-center gap-3 px-5 py-3">
+			<Input value={name} onChange={(e) => setName(e.target.value)} aria-label={`Name of ${c.name}`} className="h-10 w-56" />
+			<Input
+				value={order}
+				onChange={(e) => setOrder(e.target.value.replace(/\D/g, ""))}
+				aria-label={`Position of ${c.name}`}
+				className="h-10 w-16"
+			/>
+			<span className="text-sm text-grey-900">
+				/{c.slug} · {count(c.productCount)} product{c.productCount === 1 ? "" : "s"}
+			</span>
+			<span
+				className={clsx(
+					"rounded-full px-2.5 py-0.5 text-xs font-medium",
+					c.isActive ? "bg-success-50 text-success-700" : "bg-grey-500 text-grey-900",
+				)}
+			>
+				{c.isActive ? "Active" : "Off"}
+			</span>
+			<div className="ml-auto flex gap-2">
+				{changed && (
+					<Button
+						size="sm"
+						isLoading={update.isPending}
+						onClick={() => update.mutate({ id: c.id, name: name.trim(), sortOrder: Number(order) || c.sortOrder })}
+					>
+						Save
+					</Button>
+				)}
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={update.isPending}
+					onClick={() => update.mutate({ id: c.id, isActive: !c.isActive })}
+				>
+					{c.isActive ? "Turn off" : "Turn on"}
+				</Button>
+			</div>
+		</li>
 	);
 }

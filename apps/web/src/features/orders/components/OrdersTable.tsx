@@ -1,23 +1,22 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { Skeleton } from "@repo/ui/skeleton";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_TONE, orderDate } from "@/features/orders/options";
-import type { CustomerOrderRow, CustomerOrderStatus } from "@/features/orders/types";
-import { naira } from "@/lib/format";
+import { displayStatus, orderDate, STATUS_LABEL, STATUS_TONE } from "@/features/orders/options";
+import type { Order } from "@/features/orders/types";
+import { price } from "@/lib/format";
 import { accountRoutes } from "@/lib/routes";
 
-export function OrderStatusBadge({ status }: { status: CustomerOrderStatus }) {
+export function OrderStatusBadge({ order }: { order: Order }) {
+	const status = displayStatus(order);
 	return (
-		<span
-			className={clsx("rounded-full px-3 py-0.5 text-sm font-medium whitespace-nowrap md:text-base", ORDER_STATUS_TONE[status])}
-		>
-			{ORDER_STATUS_LABEL[status]}
+		<span className={clsx("rounded-full px-3 py-0.5 text-sm font-medium whitespace-nowrap md:text-base", STATUS_TONE[status])}>
+			{STATUS_LABEL[status]}
 		</span>
 	);
 }
 
 /** Figma orders table (Order History and My Account's Recent Orders History): Order ID, Date, Price, Status, View Details. */
-export function OrdersTable({ orders, isPending, rows = 5 }: { orders: CustomerOrderRow[]; isPending: boolean; rows?: number }) {
+export function OrdersTable({ orders, isPending, rows = 5 }: { orders: Order[]; isPending: boolean; rows?: number }) {
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full min-w-[720px]">
@@ -50,10 +49,10 @@ export function OrdersTable({ orders, isPending, rows = 5 }: { orders: CustomerO
 									style={{ "--i": Math.min(i, 6) } as React.CSSProperties}
 								>
 									<td className="py-7 pr-3 pl-8 text-base font-semibold whitespace-nowrap text-ink">{o.number}</td>
-									<td className="px-3 py-7 text-base whitespace-nowrap text-ink">{orderDate(o.created_at)}</td>
-									<td className="px-3 py-7 text-base whitespace-nowrap text-ink">{naira(o.total, 2)}</td>
+									<td className="px-3 py-7 text-base whitespace-nowrap text-ink">{orderDate(o.createdAt)}</td>
+									<td className="px-3 py-7 text-base whitespace-nowrap text-ink">{price(o.total)}</td>
 									<td className="px-3 py-7">
-										<OrderStatusBadge status={o.status} />
+										<OrderStatusBadge order={o} />
 									</td>
 									<td className="px-3 py-7">
 										<Link

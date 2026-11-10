@@ -1,11 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getData } from "@/lib/api/client";
 import { backendRoutes } from "@/lib/routes";
-import type { Dashboard } from "@/features/dashboard/types";
+import type { Dashboard, DashboardPeriod } from "@/features/dashboard/types";
 
-/** A4: the Overview page. */
-export function useDashboard() {
-	return useQuery({ queryKey: ["admin", "dashboard"], queryFn: () => getData<Dashboard>(backendRoutes.DASHBOARD) });
+/** PRD A4: the Overview. Days back: 14 by day, 84 (12 weeks) by week. */
+export function useDashboard(period: DashboardPeriod) {
+	const days = period === "day" ? 14 : 84;
+	return useQuery({
+		queryKey: ["admin", "dashboard", period],
+		queryFn: () => getData<Dashboard>(backendRoutes.DASHBOARD, { period, days }),
+		placeholderData: keepPreviousData,
+	});
 }

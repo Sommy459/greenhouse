@@ -1,16 +1,22 @@
-/** Whole naira with separators: ₦75,500. `decimals` shows kobo places (₦900.00) for table amounts. */
-export const naira = (amount: number, decimals = 0) =>
-	`₦${amount.toLocaleString("en-NG", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
-
-/** Short naira: ₦20k, ₦1.5k, ₦2.4m. */
-export function nairaShort(amount: number) {
-	const short = (n: number) => String(Math.round(n * 10) / 10);
-	if (amount >= 1_000_000) return `₦${short(amount / 1_000_000)}m`;
-	if (amount >= 1000) return `₦${short(amount / 1000)}k`;
-	return `₦${amount}`;
+/**
+ * Prices are US dollars in integer cents (API `{ cents, usd }`), paid 1:1 in USDC on Stellar. On-chain amounts
+ * (balances, payouts, withdrawals) come as USDC decimal strings.
+ */
+export interface Money {
+	cents: number;
+	usd: string;
 }
 
-export const count = (n: number) => n.toLocaleString("en-NG");
+const dollars = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+/** $12.50 */
+export const price = (amount: Money | number) => dollars.format((typeof amount === "number" ? amount : amount.cents) / 100);
+
+/** "12.5" → "12.50 USDC" */
+export const usdc = (amount: string | number) =>
+	`${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 7 })} USDC`;
+
+export const count = (n: number) => n.toLocaleString("en-US");
 
 /** "1st July, 2023" (Figma's date card). */
 export function longDate(date: Date) {

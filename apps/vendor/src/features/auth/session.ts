@@ -2,14 +2,20 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AuthSession, User } from "@/features/auth/types";
+import type { TokenSet, User } from "@/features/auth/types";
 
-/** The signed-in vendor, kept apart from the storefront's session. Every seller-centre page needs a vendor session (V1). */
+type Tokens = Pick<TokenSet, "accessToken" | "refreshToken">;
+
+/**
+ * The signed-in vendor. Every console page needs a session; vendors must turn on two-factor sign-in (PRD).
+ * The access token is short-lived: the API client swaps the single-use refresh token for a new pair when it expires.
+ */
 interface Session {
-	token: string | null;
+	accessToken: string | null;
+	refreshToken: string | null;
 	user: User | null;
-	expiresAt: number | null;
-	signIn: (session: AuthSession) => void;
+	signIn: (tokens: Tokens, user: User) => void;
+	setTokens: (tokens: Tokens) => void;
 	setUser: (user: User) => void;
 	signOut: () => void;
 }
@@ -17,15 +23,17 @@ interface Session {
 export const useSession = create<Session>()(
 	persist(
 		(set) => ({
-			token: null,
+			accessToken: null,
+			refreshToken: null,
 			user: null,
-			expiresAt: null,
-			signIn: ({ access_token, user, expires_in }) => set({ token: access_token, user, expiresAt: expires_in }),
+			signIn: ({ accessToken, refreshToken }, user) => set({ accessToken, refreshToken, user }),
+			setTokens: ({ accessToken, refreshToken }) => set({ accessToken, refreshToken }),
 			setUser: (user) => set({ user }),
-			signOut: () => set({ token: null, user: null, expiresAt: null }),
+			signOut: () => set({ accessToken: null, refreshToken: null, user: null }),
 		}),
-		{ name: "greenhouse-vendor-session" },
+		{ name: "fysi-vendor-session" },
 	),
 );
 
-export const isExpired = (expiresAt: number | null) => !expiresAt || expiresAt * 1000 <= Date.now();
+/** Signed in = holding a refresh token (an expired access token is renewed on the next request). */
+export const isSignedIn = (s: Pick<Session, "refreshToken">) => !!s.refreshToken;

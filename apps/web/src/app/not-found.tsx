@@ -5,8 +5,8 @@ import { Button } from "@repo/ui/button";
 import { StoreFooter } from "@/components/layouts/StoreFooter";
 import { StoreHeader } from "@/components/layouts/StoreHeader";
 import { RecentlyViewedRow } from "@/features/catalog/components/RecentlyViewedRow";
-import { Newsletter } from "@/features/home/components/Newsletter";
 import { shopRoutes } from "@/lib/routes";
+import { Newsletter } from "@/features/home/components/Newsletter";
 
 export const metadata: Metadata = { title: "Page not found", robots: { index: false, follow: false } };
 
@@ -23,11 +23,28 @@ export default function NotFound() {
 					<div className="shop-container pt-10 pb-10 lg:pt-9 lg:pb-12">
 						<div className="flex flex-col items-center text-center">
 							<h1 className="text-[26px] text-ink lg:text-[60px] lg:leading-none">Oops!</h1>
-							<p className="sr-only">Error 404: we couldn&apos;t find this page. It may have been moved, or the link was mistyped.</p>
+							<p className="sr-only">
+								Error 404: we couldn&apos;t find this page. It may have been moved, or the link was mistyped.
+							</p>
 
 							{/* The worried 404 bobs gently (off for reduced motion). */}
-							<Image src="/images/errors/404-mobile.png" alt="" width={517} height={229} priority className="animate-float mt-8 h-auto w-[300px] lg:hidden" />
-							<Image src="/images/errors/404-desktop.png" alt="" width={1964} height={844} priority sizes="980px" className="animate-float mt-11 hidden h-auto w-full max-w-[980px] lg:block" />
+							<Image
+								src="/images/errors/404-mobile.png"
+								alt=""
+								width={517}
+								height={229}
+								priority
+								className="animate-float mt-8 h-auto w-[300px] lg:hidden"
+							/>
+							<Image
+								src="/images/errors/404-desktop.png"
+								alt=""
+								width={1964}
+								height={844}
+								priority
+								sizes="980px"
+								className="animate-float mt-11 hidden h-auto w-full max-w-[980px] lg:block"
+							/>
 
 							<Button
 								asChild

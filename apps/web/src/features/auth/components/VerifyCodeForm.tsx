@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@repo/ui/input-otp";
-import { useRequestCode, useVerifyCode } from "@/features/auth/hooks";
+import { useResendCode, useVerifyEmail } from "@/features/auth/hooks";
 import { CODE_LENGTH, isEmailIdentifier } from "@/features/auth/schema";
 import { authRoutes } from "@/lib/routes";
 
@@ -15,8 +15,8 @@ const DIGITS_ONLY = "^\\d+$";
 export function VerifyCodeForm() {
 	const router = useRouter();
 	const identifier = useSearchParams().get("identifier") ?? "";
-	const verify = useVerifyCode();
-	const resend = useRequestCode({ navigate: false });
+	const verify = useVerifyEmail();
+	const resend = useResendCode();
 	const [code, setCode] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [secondsLeft, setSecondsLeft] = useState(RESEND_AFTER);
@@ -39,7 +39,7 @@ export function VerifyCodeForm() {
 			return;
 		}
 		setError(null);
-		verify.mutate({ identifier, code });
+		verify.mutate({ email: identifier, otp: code });
 	};
 
 	const onResend = () => resend.mutate(identifier, { onSuccess: () => setSecondsLeft(RESEND_AFTER) });

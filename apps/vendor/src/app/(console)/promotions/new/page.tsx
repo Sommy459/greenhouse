@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { PagePlaceholder } from "@repo/ui/page-placeholder";
+import { PromotionForm } from "@/features/promotions/components/PromotionForm";
 
-export const metadata: Metadata = { title: "Create Promotion" };
+export const metadata: Metadata = { title: "New promotion" };
 
 export default function Page() {
-	return (
-		<div className="custom-container">
-			<PagePlaceholder
-				title="Create new Promotion"
-				requirements={["V7"]}
-				description="Name, registration window, period, discount rule and products. Waiting for the Figma frame."
-			/>
-		</div>
-	);
+	return <PromotionForm />;
 }

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { CustomersView } from "@/features/customers/components/CustomersView";
+import { UsersView } from "@/features/users/components/UsersView";
 
-export const metadata: Metadata = { title: "Customers" };
+export const metadata: Metadata = { title: "Users" };
 
 export default function Page() {
 	return (
-		// CustomersView reads the URL's search params.
+		// UsersView reads the URL's search params.
 		<Suspense>
-			<CustomersView />
+			<UsersView />
 		</Suspense>
 	);
 }

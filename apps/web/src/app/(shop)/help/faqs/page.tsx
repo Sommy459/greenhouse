@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { FaqList } from "@/features/support/components/FaqList";
 import { FAQS } from "@/features/support/faqs";
-import { Newsletter } from "@/features/home/components/Newsletter";
 import { supportRoutes } from "@/lib/routes";
+import { Newsletter } from "@/features/home/components/Newsletter";
 
 export const metadata: Metadata = {
 	title: "Frequently Asked Questions",
@@ -16,7 +16,11 @@ export const metadata: Metadata = {
 const faqJsonLd = {
 	"@context": "https://schema.org",
 	"@type": "FAQPage",
-	mainEntity: FAQS.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer.join(" ") } })),
+	mainEntity: FAQS.map((f) => ({
+		"@type": "Question",
+		name: f.question,
+		acceptedAnswer: { "@type": "Answer", text: f.answer.join(" ") },
+	})),
 };
 
 /**

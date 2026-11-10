@@ -6,24 +6,14 @@ import { Button } from "@repo/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { cn } from "@repo/ui/lib/utils";
-import { useRequestEmailCode, useVerifyEmail } from "@/features/auth/hooks";
+import { useResendCode, useVerifyEmail } from "@/features/auth/hooks";
 import { VerifyCodeSchema, type VerifyCodeInput, type VerifyCodeValues } from "@/features/auth/schema";
 import { SETUP_FIELD, SETUP_LABEL, SETUP_SECONDARY, SETUP_SUBMIT } from "@/features/shop/styles";
-import { useToast } from "@/lib/use-toast";
 
-/** Figma step 3: the address (read-only, "Edit" goes back), the code field, Verify and Resend Code. */
-export function VerifyStep({
-	email,
-	onEdit,
-	onVerified,
-}: {
-	email: string;
-	onEdit: () => void;
-	onVerified: (verification_token: string) => void;
-}) {
-	const toast = useToast();
-	const verify = useVerifyEmail({ onVerified });
-	const resend = useRequestEmailCode({ onSent: (message) => toast.success(message ?? `A new code is on its way to ${email}.`) });
+/** Figma step 3 (now last): the address (read-only, "Edit" goes back), the code field, Verify and Resend Code. Verifying signs in. */
+export function VerifyStep({ email, onEdit }: { email: string; onEdit: () => void }) {
+	const verify = useVerifyEmail();
+	const resend = useResendCode();
 	const form = useForm<VerifyCodeInput, unknown, VerifyCodeValues>({
 		resolver: zodResolver(VerifyCodeSchema),
 		defaultValues: { code: "" },
@@ -33,7 +23,7 @@ export function VerifyStep({
 		<Form {...form}>
 			<form
 				noValidate
-				onSubmit={form.handleSubmit(({ code }) => verify.mutate({ email, code }))}
+				onSubmit={form.handleSubmit(({ code }) => verify.mutate({ email, otp: code }))}
 				className="mt-10 flex flex-col lg:mt-[60px]"
 			>
 				<div className="grid gap-2">

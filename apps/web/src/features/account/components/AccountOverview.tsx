@@ -2,29 +2,35 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, LogOut, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Pencil, Wallet as WalletIcon } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Skeleton } from "@repo/ui/skeleton";
-import { AddressDialog } from "@/features/account/components/AddressDialog";
 import { Avatar } from "@/features/account/components/Avatar";
-import { useAddress } from "@/features/account/hooks";
+import { AddressDialog } from "@/features/addresses/components/AddressDialog";
+import { addressLine } from "@/features/addresses/components/AddressesView";
+import { useAddresses } from "@/features/addresses/hooks";
 import { useSignOut } from "@/features/auth/hooks";
 import { useSession } from "@/features/auth/session";
 import { OrdersTable } from "@/features/orders/components/OrdersTable";
 import { useOrders } from "@/features/orders/hooks";
+import { useWallet } from "@/features/wallet/hooks";
+import { usdc } from "@/lib/format";
 import { accountRoutes } from "@/lib/routes";
 
 const CARD = "rounded-md bg-white";
 
-/** Figma "My Account" (wide screens, and phone "Account" stacked with a back link and Log Out): the profile card, the billing address with its pencil, and the five latest orders. */
+/**
+ * Figma "My Account" (wide screens, and phone "Account" stacked with a back link and Log Out): the profile card, the
+ * Billing Address (the default saved address; the pencil edits it), the Fysi wallet, and the five latest orders.
+ */
 export function AccountOverview() {
 	const user = useSession((s) => s.user);
-	const address = useAddress();
-	const orders = useOrders({ page: 1, limit: 5 });
+	const wallet = useWallet();
+	const addresses = useAddresses();
+	const main = addresses.data?.[0];
 	const [editing, setEditing] = useState(false);
+	const orders = useOrders(1, 5);
 	const signOut = useSignOut();
-	const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.email || "Your account";
-	const saved = address.data;
 
 	return (
 		<div className="pb-6 lg:pb-16">
@@ -40,7 +46,8 @@ export function AccountOverview() {
 					className={`${CARD} animate-rise flex flex-col items-center justify-center px-6 py-12 text-center`}
 				>
 					<Avatar user={user} className="size-24 text-3xl" />
-					<p className="mt-5 text-lg font-medium text-ink">{name}</p>
+					<p className="mt-5 text-lg font-medium text-ink">{user?.name || user?.email}</p>
+					<p className="text-sm text-grey-900">{user?.email}</p>
 					<Link href={accountRoutes.SETTINGS} className="mt-1 text-sm text-ink hover:text-primary-500 hover:underline">
 						View Profile
 					</Link>
@@ -58,36 +65,71 @@ export function AccountOverview() {
 						<button
 							type="button"
 							onClick={() => setEditing(true)}
-							disabled={address.isPending}
-							aria-label="Edit billing address"
+							disabled={addresses.isPending}
+							aria-label={main ? "Edit billing address" : "Add an address"}
 							className="rounded-md p-1.5 text-ink hover:bg-grey-500 hover:text-primary-500 disabled:opacity-50"
 						>
 							<Pencil className="size-6" aria-hidden />
 						</button>
 					</div>
-					{address.isPending ? (
+					{addresses.isPending ? (
 						<div className="mt-5 space-y-2">
 							<Skeleton className="h-6 w-40" />
 							<Skeleton className="h-5 w-72" />
-							<Skeleton className="h-5 w-56" />
 						</div>
-					) : saved ? (
+					) : main ? (
 						<div className="mt-5 space-y-2 text-base">
-							<p className="text-lg text-ink">
-								{saved.first_name} {saved.last_name}
-							</p>
-							<p className="text-grey-900">
-								{saved.address}, {saved.city}
-								{saved.zip_code ? ` ${saved.zip_code}` : ""}, Nigeria
-							</p>
-							<p className="text-ink">{saved.email}</p>
-							<p className="text-ink">{saved.phone_number}</p>
+							<p className="text-lg text-ink">{main.recipientName}</p>
+							<p className="text-grey-900">{addressLine(main)}, Nigeria</p>
+							<p className="text-ink">{user?.email}</p>
+							<p className="text-ink">{main.phone}</p>
+							<Link
+								href={accountRoutes.ADDRESSES}
+								className="inline-block pt-1 text-sm font-medium text-primary-500 hover:underline"
+							>
+								Manage addresses{addresses.data && addresses.data.length > 1 ? ` (${addresses.data.length})` : ""}
+							</Link>
 						</div>
 					) : (
 						<div className="mt-5 text-base text-grey-900">
-							<p>No address saved yet.</p>
+							<p>No address saved yet. Save one and checkout fills it in.</p>
 							<Button type="button" variant="outline" onClick={() => setEditing(true)} className="mt-4 rounded-md">
 								Add address
+							</Button>
+						</div>
+					)}
+				</section>
+			</div>
+
+			<div className="mt-6 lg:mt-9">
+				<section
+					aria-labelledby="wallet-card"
+					className={`${CARD} animate-rise px-6 py-8 lg:px-8`}
+					style={{ "--i": 2 } as React.CSSProperties}
+				>
+					<h2 id="wallet-card" className="flex items-center gap-2 border-b border-grey-800 pb-5 text-lg text-ink uppercase">
+						<WalletIcon className="size-5" aria-hidden />
+						Fysi Wallet
+					</h2>
+					{wallet.isPending ? (
+						<div className="mt-5 space-y-2">
+							<Skeleton className="h-8 w-40" />
+							<Skeleton className="h-5 w-64" />
+						</div>
+					) : wallet.data ? (
+						<div className="mt-5">
+							<p className="text-sm text-grey-900">Balance</p>
+							<p className="text-2xl font-semibold text-ink">{usdc(wallet.data.balance)}</p>
+							<p className="mt-1 text-sm text-grey-900">Pay for orders in one tap with your PIN.</p>
+							<Button asChild variant="outline" className="mt-4 rounded-md">
+								<Link href={accountRoutes.WALLET}>Open wallet</Link>
+							</Button>
+						</div>
+					) : (
+						<div className="mt-5 text-base text-grey-900">
+							<p>Hold USDC with Fysi and pay for orders in one tap. You set a PIN; Fysi keeps the keys safe.</p>
+							<Button asChild className="mt-4 rounded-md">
+								<Link href={accountRoutes.WALLET}>Create my wallet</Link>
 							</Button>
 						</div>
 					)}
@@ -123,6 +165,8 @@ export function AccountOverview() {
 				)}
 			</section>
 
+			<AddressDialog open={editing} onOpenChange={setEditing} address={main} />
+
 			{/* Phones: the menu with Log Out isn't beside the page. */}
 			<button
 				type="button"
@@ -132,22 +176,6 @@ export function AccountOverview() {
 				<LogOut className="size-6" aria-hidden />
 				Log Out
 			</button>
-
-			<AddressDialog
-				open={editing}
-				onOpenChange={setEditing}
-				initial={
-					saved ?? {
-						first_name: user?.first_name ?? "",
-						last_name: user?.last_name ?? "",
-						address: "",
-						city: "",
-						zip_code: "",
-						phone_number: user?.phone_number ?? "",
-						email: user?.email ?? "",
-					}
-				}
-			/>
 		</div>
 	);
 }

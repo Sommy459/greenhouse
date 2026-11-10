@@ -3,21 +3,25 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch, type Control } from "react-hook-form";
+import { useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarDays, ChevronLeft, Lock } from "lucide-react";
+import { ChevronLeft, ShieldCheck } from "lucide-react";
 import { Button } from "@repo/ui/button";
+import { Checkbox } from "@repo/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { cn } from "@repo/ui/lib/utils";
+import { addressLine } from "@/features/addresses/components/AddressesView";
+import { useAddresses } from "@/features/addresses/hooks";
 import { useSession } from "@/features/auth/session";
 import { CartItemRow } from "@/features/cart/components/CartContents";
-import { useCart } from "@/features/cart/store";
-import { useCheckoutQuote, usePlaceOrder } from "@/features/checkout/hooks";
-import { CheckoutSchema, formatCardNumber, normalisePhone, type CheckoutValues } from "@/features/checkout/schema";
-import type { CheckoutQuote, PaymentMethod } from "@/features/checkout/types";
+import { cartSubtotal, useCart } from "@/features/cart/store";
+import { useCartPreview } from "@/features/cart/sync";
+import { usePlaceOrder } from "@/features/checkout/hooks";
+import { CheckoutSchema, normalisePhone, type CheckoutValues } from "@/features/checkout/schema";
+import { NIGERIAN_STATES } from "@/features/orders/types";
+import { price } from "@/lib/format";
 import { checkoutRoutes, shopRoutes } from "@/lib/routes";
-import { formatPrice } from "@/lib/site";
 
 const subscribe = (onChange: () => void) => useCart.persist.onFinishHydration(onChange);
 const hydrated = () => useCart.persist.hasHydrated();
@@ -29,14 +33,9 @@ const LABEL = "text-[13px] font-normal text-ink";
 const CARD_LG = "lg:rounded-lg lg:border lg:border-grey-600 lg:bg-white";
 
 /**
- * Figma order summary (C5, C6, C15). Desktop: the cart items and Delivery Information on the left, Payment Information
- * (discount code, pay with, card details, totals, Pay) on the right. Mobile: one column under "‹ Order Summary".
- *
- * Totals come from the API (POST /checkout/quote), never from browser prices. The order is placed once, never retried.
- *
- * SECURITY: the card fields follow the design and catch typos, but card details are NEVER sent to our API. Before
- * launch they must be replaced by the payment provider's own secure card fields (Paystack, Flutterwave…: provider
- * still to be chosen, docs/PLAN.md). The API returns the provider's `payment_url` for card orders.
+ * Figma order summary (C5): the cart items and Delivery Information on the left; the order total (priced by the API)
+ * and Place order on the right. Placing the order holds the stock for 15 minutes and opens the payment step (C6), where
+ * the customer pays in USDC. The order is placed once, never retried.
  */
 export function CheckoutView() {
 	const router = useRouter();
@@ -44,58 +43,49 @@ export function CheckoutView() {
 	const items = useCart((s) => s.items);
 	const clearCart = useCart((s) => s.clear);
 	const user = useSession((s) => s.user);
-
-	const [couponInput, setCouponInput] = useState("");
-	const [coupon, setCoupon] = useState<string | undefined>(undefined);
-	const lines = items.map((i) => ({ product_id: i.product_id, quantity: i.quantity }));
-	const quote = useCheckoutQuote({ items: lines, coupon_code: coupon }, ready && items.length > 0);
+	const preview = useCartPreview(ready ? items : []);
+	const priced = preview.data;
 
 	const form = useForm<CheckoutValues>({
 		resolver: zodResolver(CheckoutSchema),
 		defaultValues: {
-			first_name: user?.first_name ?? "",
-			last_name: user?.last_name ?? "",
-			address: "",
+			recipientName: user?.name ?? "",
+			phone: user?.phone ?? "",
+			line1: "",
+			line2: "",
 			city: "",
-			zip_code: "",
-			phone_number: user?.phone_number ?? "",
-			email: user?.email ?? "",
-			payment_method: "card",
-			cardholder_name: "",
-			card_number: "",
-			card_expiry: "",
-			card_cvv: "",
+			state: undefined,
+			notes: "",
 		},
 	});
-	const paymentMethod = useWatch({ control: form.control, name: "payment_method" });
+
+	const addresses = useAddresses();
+	/** A saved address id, "new", or nothing yet (the default is picked once they load). */
+	const [picked, setPicked] = useState<string | null>(null);
+	const [saveNew, setSaveNew] = useState(true);
+	const saved = addresses.data ?? [];
+	const chosen = picked ?? (saved[0]?.id || "new");
 
 	const placeOrder = usePlaceOrder({
-		onPlaced: ({ order, payment_url }) => {
-			// Card orders continue on the payment provider's page; the cart is kept until payment is confirmed.
-			if (payment_url) {
-				window.location.assign(payment_url);
-				return;
-			}
+		onPlaced: (order) => {
 			clearCart();
-			router.replace(checkoutRoutes.CONFIRMATION(order.id));
+			router.replace(checkoutRoutes.PAY(order.id));
 		},
 	});
 
 	const onSubmit = (values: CheckoutValues) => {
 		if (placeOrder.isPending) return;
 		placeOrder.mutate({
-			items: lines,
-			coupon_code: quote.data?.coupon ? coupon : undefined,
-			payment_method: values.payment_method,
-			// Delivery only: card fields are deliberately left out (see the note above).
-			delivery: {
-				first_name: values.first_name.trim(),
-				last_name: values.last_name.trim(),
-				address: values.address.trim(),
-				city: values.city.trim(),
-				zip_code: values.zip_code.trim(),
-				phone_number: normalisePhone(values.phone_number),
-				email: values.email.trim().toLowerCase(),
+			items,
+			saveAddress: saveNew,
+			deliveryAddress: {
+				recipientName: values.recipientName,
+				phone: normalisePhone(values.phone),
+				line1: values.line1,
+				line2: values.line2 || null,
+				city: values.city,
+				state: values.state,
+				notes: values.notes || null,
 			},
 		});
 	};
@@ -112,6 +102,8 @@ export function CheckoutView() {
 			</div>
 		);
 	}
+
+	const blocked = !!priced && !priced.readyForCheckout;
 
 	return (
 		<div className="shop-container pt-4 pb-10 lg:pt-8">
@@ -131,37 +123,136 @@ export function CheckoutView() {
 			<Form {...form}>
 				<form
 					noValidate
-					onSubmit={form.handleSubmit(onSubmit)}
+					onSubmit={(e) => {
+						if (chosen !== "new") {
+							e.preventDefault();
+							if (!placeOrder.isPending) placeOrder.mutate({ items, addressId: chosen });
+						} else form.handleSubmit(onSubmit)(e);
+					}}
 					className="mt-4 grid items-start gap-8 lg:mt-0 lg:grid-cols-[minmax(0,760px)_minmax(0,423px)] lg:justify-between lg:gap-8"
 				>
 					<div className="space-y-8">
 						<section aria-label="Items" className={cn("animate-rise lg:p-7", CARD_LG)}>
 							<ul className="space-y-5 lg:space-y-6">
 								{items.map((item, i) => (
-									<CartItemRow key={item.product_id} item={item} variant="checkout" index={i} />
+									<CartItemRow
+										key={item.product_id}
+										item={item}
+										line={priced?.items.find((l) => l.productId === item.product_id)}
+										variant="checkout"
+										index={i}
+									/>
 								))}
 							</ul>
 						</section>
 
-						<DeliveryInformation control={form.control} />
+						{saved.length > 0 && (
+							<section aria-labelledby="saved-title" className={cn("animate-rise lg:px-7 lg:py-8", CARD_LG)}>
+								<h2 id="saved-title" className="text-[22px] font-semibold text-ink lg:text-2xl">
+									Deliver to
+								</h2>
+								<div role="radiogroup" aria-labelledby="saved-title" className="mt-4 space-y-3">
+									{saved.map((a) => (
+										<label
+											key={a.id}
+											className={cn(
+												"flex cursor-pointer gap-3 rounded-lg border p-4 text-sm",
+												chosen === a.id ? "border-primary-500 bg-primary-50" : "border-grey-600 bg-white",
+											)}
+										>
+											<input
+												type="radio"
+												name="address"
+												checked={chosen === a.id}
+												onChange={() => setPicked(a.id)}
+												className="mt-0.5 accent-primary-500"
+											/>
+											<span>
+												<span className="font-medium text-ink">{a.label || a.recipientName}</span>
+												{a.isDefault && <span className="ml-2 text-xs text-primary-500">Default</span>}
+												<span className="block text-grey-900">
+													{a.recipientName} · {a.phone}
+												</span>
+												<span className="block text-grey-900">{addressLine(a)}</span>
+											</span>
+										</label>
+									))}
+									<label
+										className={cn(
+											"flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm",
+											chosen === "new" ? "border-primary-500 bg-primary-50" : "border-grey-600 bg-white",
+										)}
+									>
+										<input
+											type="radio"
+											name="address"
+											checked={chosen === "new"}
+											onChange={() => setPicked("new")}
+											className="accent-primary-500"
+										/>
+										<span className="font-medium text-ink">Use a new address</span>
+									</label>
+								</div>
+							</section>
+						)}
+
+						{chosen === "new" && (
+							<>
+								<DeliveryInformation control={form.control} />
+								<label className="flex items-center gap-2 text-sm text-ink">
+									<Checkbox checked={saveNew} onCheckedChange={(on) => setSaveNew(on === true)} />
+									Save this address for next time
+								</label>
+							</>
+						)}
 					</div>
 
-					<PaymentInformation
-						control={form.control}
-						paymentMethod={paymentMethod}
-						quote={quote.data}
-						quoteLoading={quote.isPending || quote.isFetching}
-						quoteError={quote.isError}
-						couponInput={couponInput}
-						onCouponInput={setCouponInput}
-						appliedCoupon={coupon}
-						onApplyCoupon={() => setCoupon(couponInput.trim().toUpperCase() || undefined)}
-						onRemoveCoupon={() => {
-							setCoupon(undefined);
-							setCouponInput("");
-						}}
-						submitting={placeOrder.isPending}
-					/>
+					<section
+						aria-labelledby="total-title"
+						className={cn("animate-rise lg:sticky lg:top-6 lg:px-7 lg:py-8", CARD_LG)}
+						style={{ "--i": 2 } as React.CSSProperties}
+					>
+						<h2 id="total-title" className="text-[22px] font-semibold text-ink lg:text-2xl">
+							Payment
+						</h2>
+						<p className="mt-3 text-[13px] leading-relaxed text-grey-900">
+							You pay in <strong className="font-semibold text-ink">USDC on Stellar</strong> (1 USDC = $1): from your Fysi wallet,
+							any Stellar wallet, a QR code or a payment link. You choose on the next step.
+						</p>
+
+						<dl className="mt-6 space-y-3 text-[13px] text-ink">
+							<Row
+								label={`Items (${priced?.itemCount ?? items.length})`}
+								value={price(priced?.subtotal ?? cartSubtotal(items))}
+							/>
+							{priced && priced.vendorCount > 1 && <Row label="Shops" value={String(priced.vendorCount)} />}
+						</dl>
+						<dl className="mt-5 border-t border-grey-600 pt-6 text-[13px] text-ink">
+							<Row label="Total" value={priced ? price(priced.subtotal) : "…"} strong />
+						</dl>
+						{preview.isError && (
+							<p className="mt-2 text-xs text-error-500">Couldn&apos;t check your cart. Check your connection and try again.</p>
+						)}
+						{blocked && (
+							<p role="alert" className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-xs text-warning-700">
+								Some items changed. Update them in your cart, then place the order.
+							</p>
+						)}
+
+						<Button
+							type="submit"
+							isLoading={placeOrder.isPending}
+							disabled={!priced || blocked || placeOrder.isPending}
+							className="mt-6 h-[54px] w-full rounded-lg text-base font-semibold"
+						>
+							{priced ? `Place order · ${price(priced.subtotal)}` : "Place order"}
+						</Button>
+						<p className="mt-3 flex items-start gap-2 text-xs text-grey-800">
+							<ShieldCheck className="mt-px size-4 shrink-0 text-primary-500" aria-hidden />
+							Your payment is held safely until you confirm delivery (or 7 days after shipping). Items are held for 15 minutes
+							while you pay.
+						</p>
+					</section>
 				</form>
 			</Form>
 		</div>
@@ -179,30 +270,10 @@ function DeliveryInformation({ control }: { control: Control<CheckoutValues> }) 
 				Delivery Information
 			</h2>
 			<div className="mt-5 grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:mt-6">
-				<TextField control={control} name="first_name" label="First Name" placeholder="e.g. Nike" autoComplete="given-name" />
-				<TextField control={control} name="last_name" label="Last Name" placeholder="e.g. Bankole" autoComplete="family-name" />
+				<TextField control={control} name="recipientName" label="Full name" placeholder="e.g. Nike Bankole" autoComplete="name" />
 				<TextField
 					control={control}
-					name="address"
-					label="Address"
-					placeholder="House number and street"
-					autoComplete="street-address"
-					className="sm:col-span-2"
-				/>
-				<div className="grid grid-cols-2 gap-x-3 sm:contents sm:gap-x-5">
-					<TextField control={control} name="city" label="City/Town" placeholder="e.g. Ikeja" autoComplete="address-level2" />
-					<TextField
-						control={control}
-						name="zip_code"
-						label="Zip Code"
-						placeholder="Optional"
-						autoComplete="postal-code"
-						inputMode="numeric"
-					/>
-				</div>
-				<TextField
-					control={control}
-					name="phone_number"
+					name="phone"
 					label="Mobile Number"
 					placeholder="e.g. 0801 234 5678"
 					autoComplete="tel"
@@ -211,207 +282,60 @@ function DeliveryInformation({ control }: { control: Control<CheckoutValues> }) 
 				/>
 				<TextField
 					control={control}
-					name="email"
-					label="Email address"
-					placeholder="you@example.com"
-					autoComplete="email"
-					type="email"
+					name="line1"
+					label="Address"
+					placeholder="House number and street"
+					autoComplete="address-line1"
+					className="sm:col-span-2"
 				/>
-			</div>
-		</section>
-	);
-}
-
-interface PaymentProps {
-	control: Control<CheckoutValues>;
-	paymentMethod: PaymentMethod;
-	quote: CheckoutQuote | undefined;
-	quoteLoading: boolean;
-	quoteError: boolean;
-	couponInput: string;
-	onCouponInput: (value: string) => void;
-	appliedCoupon: string | undefined;
-	onApplyCoupon: () => void;
-	onRemoveCoupon: () => void;
-	submitting: boolean;
-}
-
-function PaymentInformation(props: PaymentProps) {
-	const { control, paymentMethod, quote, quoteLoading, quoteError, submitting } = props;
-	const couponApplied = !!quote?.coupon && quote.coupon.code === props.appliedCoupon;
-	const couponError = props.appliedCoupon && quote?.coupon_error;
-
-	return (
-		<section
-			aria-labelledby="payment-title"
-			className={cn("animate-rise lg:sticky lg:top-6 lg:px-7 lg:py-8", CARD_LG)}
-			style={{ "--i": 2 } as React.CSSProperties}
-		>
-			{/* Mobile shows no title here (design), but screen readers still get it. */}
-			<h2 id="payment-title" className="sr-only text-[22px] font-semibold text-ink lg:not-sr-only">
-				Payment Information
-			</h2>
-
-			<div className="lg:mt-7">
-				<label htmlFor="coupon" className="text-[15px] font-medium text-ink">
-					Apply Discount
-				</label>
-				<div className="mt-2.5 flex gap-3">
-					<Input
-						id="coupon"
-						value={props.couponInput}
-						onChange={(e) => props.onCouponInput(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") {
-								e.preventDefault();
-								props.onApplyCoupon();
-							}
-						}}
-						placeholder="Enter Coupon Code"
-						autoComplete="off"
-						disabled={couponApplied}
-						className="h-[50px] flex-1 rounded-md border-0 bg-grey-500 px-3.5 text-sm uppercase shadow-none placeholder:normal-case placeholder:text-grey-800 md:text-sm"
-					/>
-					{couponApplied ? (
-						<Button
-							type="button"
-							variant="outline"
-							onClick={props.onRemoveCoupon}
-							className="h-[50px] rounded-md border-grey-700 px-5"
-						>
-							Remove
-						</Button>
-					) : (
-						<Button
-							type="button"
-							onClick={props.onApplyCoupon}
-							disabled={!props.couponInput.trim()}
-							className="h-[50px] rounded-md px-6 text-base font-semibold"
-						>
-							Apply
-						</Button>
+				<TextField
+					control={control}
+					name="line2"
+					label="Apartment, landmark (optional)"
+					placeholder="e.g. Flat 3, opposite the market"
+					autoComplete="address-line2"
+					className="sm:col-span-2"
+				/>
+				<TextField control={control} name="city" label="City/Town" placeholder="e.g. Ikeja" autoComplete="address-level2" />
+				<FormField
+					control={control}
+					name="state"
+					render={({ field }) => (
+						<FormItem className="gap-1.5">
+							<FormLabel className={LABEL}>State</FormLabel>
+							<FormControl>
+								<select
+									{...field}
+									value={field.value ?? ""}
+									autoComplete="address-level1"
+									className={cn(
+										FIELD,
+										"w-full border px-3 outline-none focus-visible:ring-[3px]",
+										!field.value && "text-grey-800",
+									)}
+								>
+									<option value="" disabled>
+										Choose a state
+									</option>
+									{NIGERIAN_STATES.map((s) => (
+										<option key={s} value={s} className="text-ink">
+											{s}
+										</option>
+									))}
+								</select>
+							</FormControl>
+							<FormMessage />
+						</FormItem>
 					)}
-				</div>
-				{couponApplied && <p className="mt-1.5 text-xs text-success-500">{quote?.coupon?.description}</p>}
-				{couponError && <p className="mt-1.5 text-xs text-error-500">{couponError}</p>}
-			</div>
-
-			<FormField
-				control={control}
-				name="payment_method"
-				render={({ field }) => (
-					<FormItem className="mt-6 gap-0">
-						<fieldset>
-							<legend className="text-[15px] font-medium text-ink">Pay With</legend>
-							<div className="mt-3 space-y-2.5">
-								<Radio
-									name={field.name}
-									value="card"
-									checked={field.value === "card"}
-									onChange={() => field.onChange("card")}
-									label="Debit or Credit Card"
-								/>
-								<Radio
-									name={field.name}
-									value="pay_on_delivery"
-									checked={field.value === "pay_on_delivery"}
-									onChange={() => field.onChange("pay_on_delivery")}
-									label="Pay on Delivery"
-								/>
-							</div>
-						</fieldset>
-					</FormItem>
-				)}
-			/>
-
-			{paymentMethod === "card" && (
-				<div className="mt-6">
-					<p className="text-[15px] font-medium text-ink">Enter Card Information</p>
-					<div className="mt-3 space-y-4">
-						<TextField
-							control={control}
-							name="cardholder_name"
-							label="Cardholder Name"
-							placeholder="Name on the card"
-							autoComplete="cc-name"
-						/>
-						<FormField
-							control={control}
-							name="card_number"
-							render={({ field }) => (
-								<FormItem className="gap-1.5">
-									<FormLabel className={LABEL}>Card Number</FormLabel>
-									<FormControl>
-										<Input
-											{...field}
-											onChange={(e) => field.onChange(formatCardNumber(e.target.value))}
-											placeholder="0000 0000 0000 0000"
-											autoComplete="cc-number"
-											inputMode="numeric"
-											className={FIELD}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-3">
-							<TextField
-								control={control}
-								name="card_expiry"
-								label="Expiry Date"
-								placeholder="MM/YYYY"
-								autoComplete="cc-exp"
-								inputMode="numeric"
-								icon={CalendarDays}
-							/>
-							<TextField
-								control={control}
-								name="card_cvv"
-								label="CVV"
-								placeholder="123"
-								autoComplete="cc-csc"
-								inputMode="numeric"
-								maxLength={4}
-								icon={Lock}
-							/>
-						</div>
-					</div>
-				</div>
-			)}
-
-			<dl className="mt-6 space-y-3 text-[13px] text-ink">
-				<Row label="Sub Total" value={quote ? formatPrice(quote.subtotal) : "…"} />
-				<Row
-					label="Promo Discount"
-					value={quote ? (quote.discount > 0 ? `−${formatPrice(quote.discount)}` : formatPrice(0)) : "…"}
 				/>
-				<Row label="Shipping" value={quote ? (quote.shipping === 0 ? "Free" : formatPrice(quote.shipping)) : "…"} />
-			</dl>
-			<dl className="mt-5 border-t border-grey-600 pt-6 text-[13px] text-ink">
-				<Row label="Total" value={quote ? formatPrice(quote.total) : "…"} strong />
-			</dl>
-			{quoteError && (
-				<p className="mt-2 text-xs text-error-500">Couldn&apos;t work out your total. Check your connection and try again.</p>
-			)}
-
-			<Button
-				type="submit"
-				isLoading={submitting}
-				disabled={!quote || quoteLoading || submitting}
-				className="mt-6 h-[54px] w-full rounded-lg text-base font-semibold"
-			>
-				{quote
-					? paymentMethod === "card"
-						? `Pay ${formatPrice(quote.total)}`
-						: `Place order · ${formatPrice(quote.total)}`
-					: "Pay"}
-			</Button>
-			<p className="mt-3 text-center text-xs text-grey-800">
-				{paymentMethod === "card"
-					? "You'll confirm the payment securely with our payment partner."
-					: "Pay the courier in cash or by transfer when your order arrives."}
-			</p>
+				<TextField
+					control={control}
+					name="notes"
+					label="Delivery notes (optional)"
+					placeholder="e.g. Call before you come"
+					className="sm:col-span-2"
+				/>
+			</div>
 		</section>
 	);
 }
@@ -425,48 +349,18 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
 	);
 }
 
-/** Green ring and dot when chosen (Figma). */
-function Radio({
-	name,
-	value,
-	checked,
-	onChange,
-	label,
-}: {
-	name: string;
-	value: string;
-	checked: boolean;
-	onChange: () => void;
-	label: string;
-}) {
-	return (
-		<label className="flex w-fit cursor-pointer items-center gap-3 text-[15px] text-ink">
-			<input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="peer sr-only" />
-			<span
-				aria-hidden
-				className="grid size-5 place-items-center rounded-full border-[1.5px] border-grey-700 bg-white peer-checked:border-primary-400 peer-focus-visible:ring-[3px] peer-focus-visible:ring-primary-300/40 peer-checked:[&>span]:block"
-			>
-				<span className="hidden size-2.5 rounded-full bg-primary-400" />
-			</span>
-			{label}
-		</label>
-	);
-}
-
-type TextName = Exclude<keyof CheckoutValues, "payment_method">;
+type TextName = Exclude<keyof CheckoutValues, "state">;
 
 function TextField({
 	control,
 	name,
 	label,
-	icon: Icon,
 	className,
 	...input
 }: {
 	control: Control<CheckoutValues>;
 	name: TextName;
 	label: string;
-	icon?: React.ComponentType<{ className?: string }>;
 	className?: string;
 } & Omit<React.ComponentProps<typeof Input>, "name" | "className">) {
 	return (
@@ -476,17 +370,9 @@ function TextField({
 			render={({ field }) => (
 				<FormItem className={cn("gap-1.5", className)}>
 					<FormLabel className={LABEL}>{label}</FormLabel>
-					<div className="relative">
-						<FormControl>
-							<Input {...input} {...field} className={cn(FIELD, Icon && "pr-10")} />
-						</FormControl>
-						{Icon && (
-							<Icon
-								className="pointer-events-none absolute top-1/2 right-3.5 size-[18px] -translate-y-1/2 text-grey-900"
-								aria-hidden
-							/>
-						)}
-					</div>
+					<FormControl>
+						<Input {...input} {...field} className={FIELD} />
+					</FormControl>
 					<FormMessage />
 				</FormItem>
 			)}
@@ -505,7 +391,7 @@ function CheckoutSkeleton() {
 				<div className="h-64 animate-pulse rounded-lg bg-grey-600" />
 				<div className="h-96 animate-pulse rounded-lg bg-grey-600" />
 			</div>
-			<div className="h-[520px] animate-pulse rounded-lg bg-grey-600" />
+			<div className="h-[420px] animate-pulse rounded-lg bg-grey-600" />
 		</div>
 	);
 }

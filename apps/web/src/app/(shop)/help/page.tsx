@@ -6,7 +6,11 @@ export const metadata: Metadata = { title: "Help center" };
 export default function Page() {
 	return (
 		<div className="shop-container">
-			<PagePlaceholder title="Help center" requirements={["C13"]} description="Help topics: orders, delivery, returns, payments, accounts." />
+			<PagePlaceholder
+				title="Help center"
+				requirements={["C13"]}
+				description="Help topics: orders, delivery, returns, payments, accounts."
+			/>
 		</div>
 	);
 }

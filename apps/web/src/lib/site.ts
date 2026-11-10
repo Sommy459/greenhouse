@@ -10,14 +10,24 @@ const SITE_KEYWORDS = ["eco-friendly", "sustainable", "marketplace", "Nigeria", 
 const THEME_COLOR = "#003e20";
 
 /**
- * On Vercel the three apps share one domain (root vercel.json): the storefront at the root, the seller centre at
- * /vendor, the admin console at /admin. NEXT_PUBLIC_SITE_URL is that domain's origin (e.g. https://fysi.ng); previews
- * use the deployment URL, and localhost in dev.
+ * Brand colours for the generated icons and share images (next/og can't read CSS variables). They mirror the tokens in
+ * packages/ui globals.css: primary-500, primary-700, primary-900, lime-400, primary-50.
  */
+const BRAND = { green: "#003e20", greenDark: "#002c17", greenDeep: "#001a0d", lime: "#e5fe49", mist: "#e6ece9" };
+
+/**
+ * On Vercel the three apps share one domain (root vercel.json): the storefront at the root, the seller centre at
+ * /vendor, the admin console at /admin. NEXT_PUBLIC_SITE_URL is that domain's origin; without it, production uses
+ * https://greenhouse-v3.vercel.app, previews their deployment URL, and dev localhost.
+ */
+/** The production domain. Links, canonical URLs and share images point here unless NEXT_PUBLIC_SITE_URL says otherwise. */
+const PRODUCTION_ORIGIN = "https://greenhouse-v3.vercel.app";
+const VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV;
 const VERCEL_ORIGIN =
 	(process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL) &&
 	`https://${process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL}`;
-const SHARED_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || VERCEL_ORIGIN || undefined;
+const SHARED_ORIGIN =
+	process.env.NEXT_PUBLIC_SITE_URL || (VERCEL_ENV === "production" ? PRODUCTION_ORIGIN : VERCEL_ORIGIN) || undefined;
 const ORIGIN = SHARED_ORIGIN || "http://localhost:3000";
 
 const SITE_URL = new URL("/", ORIGIN);
@@ -40,11 +50,8 @@ const SOCIAL_HANDLES = { instagram: "@Fysi", facebook: "@Fysi", x: "@Fysi" };
  */
 const CONTACT = { hours: "24hrs Mon - Sun", email: "Fysi@gmail.com", phone: "+2348100000000" };
 
-/** Prices are whole naira (PRD: localisation). */
-const naira = new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 });
-const formatPrice = (amount: number) => naira.format(amount);
-
 export {
+	BRAND,
 	SITE_NAME,
 	SITE_TAGLINE,
 	SITE_DESCRIPTION,
@@ -56,5 +63,4 @@ export {
 	SOCIAL_LINKS,
 	SOCIAL_HANDLES,
 	CONTACT,
-	formatPrice,
 };

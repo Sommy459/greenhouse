@@ -5,9 +5,11 @@ import { STORE_URL } from "@/lib/site";
 export const authRoutes = {
 	SIGN_IN: "/sign-in",
 	SIGN_UP: "/sign-up",
+	/** Turn on two-factor sign-in (required for vendors before anything else works). */
+	TWO_FACTOR: "/two-factor",
 };
 
-/** Before the console: "Set up your shop", then wait for admin approval (V1). */
+/** Before the console: the business profile and documents (V2), then wait for admin approval (V3). */
 export const setupRoutes = {
 	ONBOARDING: "/onboarding",
 	PENDING: "/pending",
@@ -30,78 +32,77 @@ export const consoleRoutes = {
 	PRODUCTS: "/products",
 	NEW_PRODUCT: "/products/new",
 	PRODUCT: (productId: string) => `/products/${productId}`,
-	/** The same page, opened at its edit form. */
-	EDIT_PRODUCT: (productId: string) => `/products/${productId}?edit=1`,
-	INVENTORY: "/inventory",
 	ORDERS: "/orders",
-	/** Figma "Track Orders": look up a package by tracking number or order ID; Active and My Shipping lists. */
-	TRACK_ORDERS: "/orders/track",
-	/** Track Orders with a lookup filled in. */
-	TRACK: (id: string) => `/orders/track?id=${encodeURIComponent(id)}`,
 	/** Order Details, a dialog over the order list (Figma). */
 	ORDER: (orderId: string) => `/orders?order=${encodeURIComponent(orderId)}`,
-	/** The same dialog, scrolled to Order Tracking. */
-	TRACK_ORDER: (orderId: string) => `/orders?order=${encodeURIComponent(orderId)}&section=tracking`,
 	/** The same dialog with Update status open (PRD V8: status, courier and tracking number). */
 	ORDER_UPDATE: (orderId: string) => `/orders?order=${encodeURIComponent(orderId)}&section=update`,
-	SHIPPING: "/shipping",
-	PROMOTIONS: "/promotions",
-	/** Not designed yet. */
-	NEW_PROMOTION: "/promotions/new",
-	/** Figma sidebar "Monitor Promotions"; not designed yet. */
-	MONITOR_PROMOTIONS: "/promotions/monitor",
-	PROMOTION: (promotionId: string) => `/promotions/monitor?promotion=${encodeURIComponent(promotionId)}`,
-	EDIT_PROMOTION: (promotionId: string) => `/promotions/new?edit=${encodeURIComponent(promotionId)}`,
-	CERTIFICATION: "/certification",
-	ANALYTICS: "/analytics",
-	MESSAGES: "/messages",
-	TRAINING: "/training",
-	/** Figma "Account Statements": the shop's wallet (PRD V5, V6). */
+	/** The shop's wallet (PRD V5, V6): balances, payouts, withdrawals. Was Figma "Account Statements". */
+	WALLET: "/wallet",
+	/** Figma "Account Statements": earnings and withdrawals with a running balance. */
 	STATEMENTS: "/statements",
+	/** Sales analytics and how each product performs. */
+	ANALYTICS: "/analytics",
+	/** Figma "Promotion Management": percentage-off promotions. */
+	PROMOTIONS: "/promotions",
+	NEW_PROMOTION: "/promotions/new",
+	PROMOTION: (id: string) => `/promotions/${id}`,
+	REVIEWS: "/reviews",
 	SETTINGS: "/settings",
 	HELP: "/help",
 };
 
-/** API paths (relative to /api/v1). */
+/** Fysi API paths, relative to /api/v1 (https://fysi-backend-production.up.railway.app/docs). */
 export const backendRoutes = {
+	// Auth
+	REGISTER: "/auth/register",
+	VERIFY_EMAIL: "/auth/verify-email",
+	RESEND_CODE: "/auth/resend-otp",
 	SIGN_IN: "/auth/login",
-	SIGN_UP: "/auth/signup",
-	MY_SHOP: "/vendor/me",
-	ONBOARDING: "/vendor/onboarding",
-	/** Seller sign-up steps 2–3: send a code to the e-mail, then check it. Placeholders until matched to the API. */
-	EMAIL_CODE: "/auth/email/code",
-	EMAIL_VERIFY: "/auth/email/verify",
-	MY_PRODUCTS: "/vendor/products",
-	/** One listing: PATCH `{ status }` to hide / show, DELETE to remove. */
-	MY_PRODUCT: (productId: string) => `/vendor/products/${productId}`,
-	/** Manage Products: the four totals above the list. */
-	MY_PRODUCT_STATS: "/vendor/products/stats",
-	/** The same filters as MY_PRODUCTS (or `ids`), answered as a CSV file. */
-	MY_PRODUCTS_EXPORT: "/vendor/products/export",
-	DASHBOARD: "/vendor/dashboard",
-	/** Storefront categories, for the Add Products form. */
+	LOGIN_2FA: "/auth/login/2fa",
+	SETUP_2FA: "/auth/2fa/setup",
+	ENABLE_2FA: "/auth/2fa/enable",
+	REFRESH: "/auth/refresh",
+	LOGOUT: "/auth/logout",
+	CHANGE_PASSWORD: "/auth/change-password",
+	ME: "/auth/me",
+	AVATAR: "/auth/me/avatar",
+	// Onboarding (V2, V3)
+	PROFILE: "/vendor/profile",
+	LOGO: "/vendor/profile/logo",
+	DOCUMENTS: "/vendor/documents",
+	DOCUMENT: (id: string) => `/vendor/documents/${id}`,
+	SUBMIT: "/vendor/submit",
 	CATEGORIES: "/categories",
-	/** The shop's certificates (from onboarding and later uploads). */
-	MY_CERTIFICATIONS: "/vendor/certifications",
+	// Products (V7)
+	MY_PRODUCTS: "/vendor/products",
+	MY_PRODUCT: (id: string) => `/vendor/products/${id}`,
+	PRODUCT_IMAGES: (id: string) => `/vendor/products/${id}/images`,
+	PRODUCT_IMAGE_ORDER: (id: string) => `/vendor/products/${id}/images/order`,
+	PRODUCT_IMAGE: (id: string, imageId: string) => `/vendor/products/${id}/images/${imageId}`,
+	// Orders (V8)
 	MY_ORDERS: "/vendor/orders",
-	MY_ORDER: (orderId: string) => `/vendor/orders/${orderId}`,
-	/** POST `{ status, courier?, tracking_number?, reason? }`. */
-	MY_ORDER_STATUS: (orderId: string) => `/vendor/orders/${orderId}/status`,
-	/** The same filters as MY_ORDERS (or `ids`), answered as a CSV file. */
-	MY_ORDERS_EXPORT: "/vendor/orders/export",
-	/** GET `?q=` a tracking number or order ID → that order's details (404 if none). */
-	TRACK_ORDER: "/vendor/orders/track",
-	/** Account Statements (PRD V5): `status, page, limit`. */
-	STATEMENTS: "/vendor/statements",
-	STATEMENT: (id: string) => `/vendor/statements/${id}`,
-	/** GET the export list; POST `{ currency }` to ask for one (built in the background). */
-	STATEMENT_EXPORTS: "/vendor/statements/exports",
-	STATEMENT_EXPORT_FILE: (id: string) => `/vendor/statements/exports/${id}/file`,
-	/** Promotion Management: `status, search, type, page, limit`. */
+	MY_ORDER: (id: string) => `/vendor/orders/${id}`,
+	MY_ORDER_STATUS: (id: string) => `/vendor/orders/${id}/status`,
+	// Wallet (V5, V6)
+	WALLET: "/vendor/wallet",
+	WITHDRAWALS: "/vendor/wallet/withdrawals",
+	WITHDRAWAL: (id: string) => `/vendor/wallet/withdrawals/${id}`,
+	CONFIRM_WITHDRAWAL: (id: string) => `/vendor/wallet/withdrawals/${id}/confirm`,
+	// Insights and money
+	DASHBOARD: "/vendor/dashboard",
+	ANALYTICS: "/vendor/analytics",
+	PRODUCT_STATS: "/vendor/product-stats",
+	STATEMENT: "/vendor/statements",
+	STATEMENT_CSV: "/vendor/statements/export.csv",
+	ORDERS_CSV: "/vendor/exports/orders.csv",
+	PRODUCTS_CSV: "/vendor/exports/products.csv",
+	CANCEL_ORDER: (id: string) => `/vendor/orders/${id}/cancel`,
+	// Promotions
 	PROMOTIONS: "/vendor/promotions",
-	PROMOTION_CANCEL: (id: string) => `/vendor/promotions/${id}/cancel`,
-	/** Monitor Promotions: `promotion, status, page, limit` → rows + summary. */
-	PROMOTION_PERFORMANCE: "/vendor/promotions/performance",
-	/** The same filters (or `ids`), answered as a CSV file. */
-	PROMOTION_PERFORMANCE_EXPORT: "/vendor/promotions/performance/export",
+	PROMOTION: (id: string) => `/vendor/promotions/${id}`,
+	PROMOTION_ACTION: (id: string, action: "pause" | "resume" | "end") => `/vendor/promotions/${id}/${action}`,
+	REVIEWS: "/vendor/reviews",
+	/** Prefix of CONFIRM_WITHDRAWAL, for the client's "wrong password isn't an expired session" rule. */
+	CONFIRM_WITHDRAWAL_PATTERN: "/vendor/wallet/withdrawals/",
 };

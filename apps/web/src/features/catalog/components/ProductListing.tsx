@@ -9,7 +9,7 @@ import { ListingToolbar } from "@/features/catalog/components/ListingToolbar";
 import { ProductCard, ProductCardSkeleton } from "@/features/catalog/components/ProductCard";
 import { useProducts } from "@/features/catalog/hooks";
 import { PAGE_SIZE, useListingParams } from "@/features/catalog/listing-params";
-import type { Collection } from "@/features/catalog/types";
+import type { ProductQuery } from "@/features/catalog/types";
 import { shopRoutes } from "@/lib/routes";
 
 /**
@@ -24,36 +24,34 @@ const WIDE = { image: "aspect-[8.3/5] lg:aspect-[273/171]", sizes: "(min-width: 
 
 interface Props {
 	title: string;
-	/** Which products: one category, one collection, or a search (`q` empty: every product). */
-	query: { category: string } | { collection: Collection } | { q: string };
+	/** Which products: a category, a collection (sort or certified), a search (`q`, empty: every product) or a store. */
+	query: Pick<ProductQuery, "category" | "certified" | "sort" | "q" | "vendor">;
 }
 
 /**
  * Figma category page (C2, C3): breadcrumb (desktop) or big title (mobile), Filter and Sort by, the product grid, and
- * pagination. Sort, filters and page come from the URL (useListingParams).
+ * pagination. Sort, filters and page come from the URL (useListingParams); the page's own query is the base.
  */
 export function ProductListing({ title, query }: Props) {
-	const listing = useListingParams();
-	const { sort, page, colors, availability } = listing;
-
-	// On a category page that category is ticked until the visitor picks others; collection pages start with none.
-	const pageCategory = "category" in query ? query.category : undefined;
-	const categories = listing.categories.length > 0 ? listing.categories : pageCategory ? [pageCategory] : [];
-	const activeFilters = listing.categories.length + colors.length + availability.length;
+	const listing = useListingParams({ defaultSort: query.sort ?? (query.q ? "relevance" : "newest") });
+	const { sort, page, setPage, clearFilters } = listing;
+	const ownCategory = query.category;
 
 	const { data, isPending, isError, refetch } = useProducts({
-		collection: "collection" in query ? query.collection : undefined,
-		q: "q" in query ? query.q || undefined : undefined,
-		category: categories.join(",") || undefined,
-		colors: colors.join(",") || undefined,
-		availability: availability.join(",") || undefined,
+		q: query.q || undefined,
+		vendor: query.vendor,
+		category: ownCategory ?? listing.category,
+		certified: query.certified || listing.certified || undefined,
+		inStock: listing.inStock || undefined,
+		minPriceCents: listing.minPrice != null ? listing.minPrice * 100 : undefined,
+		maxPriceCents: listing.maxPrice != null ? listing.maxPrice * 100 : undefined,
 		sort,
 		page,
 		limit: PAGE_SIZE,
 	});
 	const products = data?.items ?? [];
 	const totalPages = data?.meta.total_pages ?? 1;
-	const { setPage, clearFilters } = listing;
+	const activeFilters = listing.filterCount;
 
 	return (
 		<div className="shop-container pt-4 pb-4 lg:pt-8">
@@ -76,11 +74,14 @@ export function ProductListing({ title, query }: Props) {
 
 			<div className="animate-rise mt-3 lg:mt-10" style={{ "--i": 1 } as React.CSSProperties}>
 				<ListingToolbar
-					filters={{ categories, colors, availability }}
+					category={ownCategory ? null : listing.category}
+					show={[...(query.certified || listing.certified ? ["certified"] : []), ...(listing.inStock ? ["in_stock"] : [])]}
+					minPrice={listing.minPrice}
+					maxPrice={listing.maxPrice}
 					filterCount={activeFilters}
-					onCategoriesChange={listing.setCategories}
-					onColorsChange={listing.setColors}
-					onAvailabilityChange={listing.setAvailability}
+					onCategoryChange={listing.setCategory}
+					onShowChange={listing.setShow}
+					onPriceChange={listing.setPrice}
 					sort={sort}
 					onSortChange={listing.setSort}
 				/>

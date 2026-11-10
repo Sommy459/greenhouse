@@ -37,24 +37,27 @@ Query, zustand, react-hook-form + zod 4, axios, lucide, sonner toasts, recharts 
 
 ## Data
 
-- **The backend is external** (separate repo). Do not add a backend, API routes or a mock server here: this repo is
-  frontend only. One agreed exception, temporary: `apps/web/src/lib/api/mock.ts` fakes customer auth, the catalogue
-  (sample products in `mock-catalog.ts`, photos in `public/images/products`) and the newsletter in the browser when
-  `NEXT_PUBLIC_MOCK_API=1` (demo@fysi.ng / Password1, code 1234). The vendor app has the same switch:
-  `apps/vendor/src/lib/api/mock.ts` fakes sign in/up, the shop and onboarding (new@fysi.ng and vendor@fysi.ng, both
-  Password1). The admin app too: `apps/admin/src/lib/api/mock.ts` fakes sign in (admin@fysi.ng / Password1), the
-  Overview dashboard, products (list, New Category, Add Product), orders and customers (lists, details, export, delete,
-  blacklist). Delete them once the API is connected.
-- The browser calls `/api/v1/*` on its own origin, rewritten in each app's `next.config.ts` to `API_PROXY_TARGET` (the
-  external API's base URL). `NEXT_PUBLIC_API_URL` forces direct calls.
-- API paths (`backendRoutes` in `lib/routes.ts`) and shapes (`features/*/types.ts`) are placeholders until matched to the
-  external API's contract (docs/PLAN.md). Assumed envelope: `{ status_code, message, data }`; errors `{ message }`.
-  Prices are whole naira.
-- One client per app: `lib/api/client.ts` (`api`, `getData`, `errorMessage`) adds the session token and signs out on 401.
-- Sessions: zustand `persist` per app (`greenhouse-session`, `greenhouse-vendor-session`, `greenhouse-admin-session`).
-  Guards: web `RequireAuth` (/account, /checkout; returns via `?next=`), vendor `RequireVendor` + `ShopGate`
-  (no shop → /onboarding; not approved → /pending), admin `RequireAdmin` (sign-in refuses non-admin roles).
-- Cart (`apps/web/src/features/cart/store.ts`) lives in the browser and works signed out; the API reprices at checkout.
+- **The backend is external**: the Fysi API, https://fysi-backend-production.up.railway.app (docs at `/docs`, OpenAPI JSON
+  at `/docs-json`). Do not add a backend, API routes or mocks here. The browser mocks were deleted on 2026-11-10 when the
+  apps were connected; the API is the source of truth for shapes (`features/*/types.ts` mirror it, camelCase).
+- The browser calls `<basePath>/api/v1/*` on its own origin, rewritten in each app's `next.config.ts` to
+  `API_PROXY_TARGET` (`https://fysi-backend-production.up.railway.app/api/v1`). `NEXT_PUBLIC_API_URL` forces direct calls.
+- Envelope `{ statusCode, message, data }`; lists put `{ result, paginationMeta }` in `data` and page with
+  `limit`/`offset`; `getPage()` in `lib/api/client.ts` turns them into `{ items, meta: { page, total_pages, total } }`.
+  Errors `{ message, error: { code, details } }`; `errorMessage()` shows the first validation detail, or the
+  `Retry-After` wait on a 429.
+- **Money**: prices are US dollars in integer cents (`{ cents, usd }`), paid 1:1 in USDC on Stellar; on-chain amounts
+  are USDC decimal strings. Format with `price()` / `usdc()` from `lib/format.ts`. (The PRD's naira pricing is not what
+  the API does.)
+- Sessions: an access token plus a single-use refresh token (zustand `persist`: `fysi-session`, `fysi-vendor-session`,
+  `fysi-admin-session`). The client refreshes once on a 401 and retries, else signs out. The profile is `GET /auth/me`.
+- **Two-factor sign-in**: when it's on, sign-in returns `mfaRequired` + an `mfaToken` for the code step. The API says
+  whether an account must set it up (`user.twoFactorRequired`); the guards send those to `/two-factor` until it's on.
+  Guards: web `RequireAuth` (/account, /checkout), vendor `RequireVendor` + `ShopGate` (draft/rejected → /onboarding;
+  pending/suspended → /pending), admin `RequireAdmin`.
+- Cart (`apps/web/src/features/cart`) lives in the browser and works signed out; the API prices it
+  (`/cart/preview`). Signing in pulls the account's cart in; checkout replaces the account's cart with the browser's,
+  then `POST /checkout` creates the order and the payment step (wallet PIN, Freighter, SEP-7 QR, pay link) follows.
 - Mutations never auto-retry (`retry: false`): a retried order or payment could go through twice.
 
 ## Domain rules
@@ -67,8 +70,9 @@ Query, zustand, react-hook-form + zod 4, axios, lucide, sonner toasts, recharts 
   in naira and show the USDC equivalent; the USDC quote locks for 15 minutes. The API builds every transaction and
   matches it by memo; the client never builds amounts, memos or destinations itself, and never handles private keys.
   Show the transaction hash with a Stellar explorer link (testnet vs public network) for every payment and payout.
-- Out of MVP scope: card/bank checkout, discount codes, reviews, wishlist, messaging, promotions, courier booking. Don't
-  build new screens for them; existing ones stay hidden until decided (docs/PLAN.md).
+- Out of scope: card/bank checkout, discount codes, chat between customers and vendors, courier booking. The API has
+  none of them. (Wishlist, reviews, inbox, saved addresses, support tickets, newsletter, vendor promotions, analytics
+  and statements, and the admin outreach screens came back with the 2026-11-10 backend update.)
 - Never retry a payment or order submit automatically.
 
 ## Design system (`packages/ui`)

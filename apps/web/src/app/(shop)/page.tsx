@@ -4,6 +4,7 @@ import { Newsletter } from "@/features/home/components/Newsletter";
 import { ProductSection } from "@/features/home/components/ProductSection";
 import { SustainabilityHighlight } from "@/features/home/components/SustainabilityHighlight";
 import { ValueProps } from "@/features/home/components/ValueProps";
+import { shopRoutes } from "@/lib/routes";
 
 /** The landing page (C2), as in the Figma Hi-Fi desktop and mobile frames. */
 export default function Page() {
@@ -12,10 +13,9 @@ export default function Page() {
 			<Hero />
 			<ValueProps />
 			<CategoryShowcase />
-			<ProductSection title="Products on demand" collection="on-demand" />
-			<ProductSection title="Hot deals" collection="hot-deals" />
+			<ProductSection title="Certified products" query={{ certified: true }} seeAllHref={shopRoutes.COLLECTION("certified")} />
 			<SustainabilityHighlight />
-			<ProductSection title="New In" collection="new-in" />
+			<ProductSection title="New In" query={{ sort: "newest" }} seeAllHref={shopRoutes.COLLECTION("new-in")} />
 			<Newsletter />
 		</div>
 	);

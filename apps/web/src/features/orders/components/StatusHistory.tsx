@@ -1,24 +1,22 @@
 import clsx from "clsx";
 import { Check } from "lucide-react";
-import { ORDER_STEPS, type CustomerOrder, type OrderStep } from "@/features/orders/types";
 
-const LABEL: Record<OrderStep, string> = {
-	received: "Order received",
-	processing: "Processing",
-	on_the_way: "On the way",
-	delivered: "Delivered",
-};
+export interface Step {
+	label: string;
+	reached: boolean;
+	/** When it happened, if the API says. */
+	at: string | null;
+}
 
 const when = (iso: string) =>
 	new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 type State = "done" | "current" | "next";
 
-/** The latest step reached is "current" (a filled number); earlier ones and Delivered show a tick; later ones are dashed. */
-function states(timeline: CustomerOrder["timeline"]): State[] {
-	const reached = ORDER_STEPS.map((s) => !!timeline[s]);
-	const last = reached.lastIndexOf(true);
-	return ORDER_STEPS.map((s, i) => (i < last || (i === last && s === "delivered") ? "done" : i === last ? "current" : "next"));
+/** The latest step reached is "current" (a filled number); earlier ones, and a reached last step, show a tick. */
+function states(steps: Step[]): State[] {
+	const last = steps.map((s) => s.reached).lastIndexOf(true);
+	return steps.map((_, i) => (i < last || (i === last && i === steps.length - 1) ? "done" : i === last ? "current" : "next"));
 }
 
 function Dot({ state, n }: { state: State; n: number }) {
@@ -35,11 +33,13 @@ function Dot({ state, n }: { state: State; n: number }) {
 }
 
 /** Figma "Status History": a row of steps on wide screens, a column with dates on phones. */
-export function StatusHistory({ timeline }: { timeline: CustomerOrder["timeline"] }) {
-	const s = states(timeline);
+export function StatusHistory({ steps }: { steps: Step[] }) {
+	const s = states(steps);
 	const last = s.findLastIndex((x) => x !== "next");
 	// The bar reaches the current step, and halfway on to the next while the order is still moving.
-	const progress = Math.min(1, (last + (s[last] === "current" ? 0.5 : 0)) / (ORDER_STEPS.length - 1));
+	const progress = last < 0 ? 0 : Math.min(1, (last + (s[last] === "current" ? 0.5 : 0)) / (steps.length - 1));
+	const cols = { 3: "grid-cols-3", 4: "grid-cols-4" }[steps.length] ?? "grid-cols-4";
+	const inset = `${50 / steps.length}%`;
 
 	return (
 		<>
@@ -51,34 +51,38 @@ export function StatusHistory({ timeline }: { timeline: CustomerOrder["timeline"
 					className="absolute top-5 left-[21px] w-1.5 -translate-x-1/2 rounded-full bg-primary-500"
 					style={{ height: `calc((100% - 2.5rem) * ${progress})` }}
 				/>
-				{ORDER_STEPS.map((step, i) => (
-					<li key={step} className="flex items-center gap-8" aria-current={s[i] === "current" ? "step" : undefined}>
+				{steps.map((step, i) => (
+					<li key={step.label} className="flex items-center gap-8" aria-current={s[i] === "current" ? "step" : undefined}>
 						<Dot state={s[i]!} n={i + 1} />
 						<div>
-							<p className={clsx("text-lg", s[i] === "next" ? "text-ink" : "font-medium text-ink")}>{LABEL[step]}</p>
-							<p className="mt-0.5 text-sm text-grey-900">{timeline[step] ? when(timeline[step]) : "Not yet"}</p>
+							<p className={clsx("text-lg", s[i] === "next" ? "text-ink" : "font-medium text-ink")}>{step.label}</p>
+							<p className="mt-0.5 text-sm text-grey-900">{step.at ? when(step.at) : step.reached ? "Done" : "Not yet"}</p>
 						</div>
 					</li>
 				))}
 			</ol>
 
 			{/* Wider screens: Figma's horizontal track. */}
-			<ol className="relative mt-12 hidden grid-cols-4 md:grid">
-				<span aria-hidden className="absolute top-6 right-[12.5%] left-[12.5%] h-1.5 -translate-y-1/2 rounded-full bg-grey-600" />
+			<ol className={clsx("relative mt-10 hidden md:grid", cols)}>
 				<span
 					aria-hidden
-					className="absolute top-6 left-[12.5%] h-1.5 -translate-y-1/2 rounded-full bg-primary-500"
-					style={{ width: `calc(75% * ${progress})` }}
+					className="absolute top-6 h-1.5 -translate-y-1/2 rounded-full bg-grey-600"
+					style={{ left: inset, right: inset }}
 				/>
-				{ORDER_STEPS.map((step, i) => (
+				<span
+					aria-hidden
+					className="absolute top-6 h-1.5 -translate-y-1/2 rounded-full bg-primary-500"
+					style={{ left: inset, width: `calc((100% - 2 * ${inset}) * ${progress})` }}
+				/>
+				{steps.map((step, i) => (
 					<li
-						key={step}
+						key={step.label}
 						className="flex flex-col items-center text-center"
 						aria-current={s[i] === "current" ? "step" : undefined}
 					>
 						<Dot state={s[i]!} n={i + 1} />
-						<p className={clsx("mt-4 text-base lg:text-lg", s[i] === "next" ? "text-ink" : "text-primary-500")}>{LABEL[step]}</p>
-						<p className="mt-0.5 text-sm text-grey-900">{timeline[step] ? when(timeline[step]) : ""}</p>
+						<p className={clsx("mt-4 text-base lg:text-lg", s[i] === "next" ? "text-ink" : "text-primary-500")}>{step.label}</p>
+						<p className="mt-0.5 text-sm text-grey-900">{step.at ? when(step.at) : ""}</p>
 					</li>
 				))}
 			</ol>

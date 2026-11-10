@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { CustomerDetailsView } from "@/features/customers/components/CustomerDetailsView";
+import { UserDetailView } from "@/features/users/components/UserDetailView";
 
-export const metadata: Metadata = { title: "Customer details" };
+export const metadata: Metadata = { title: "User" };
 
 export default async function Page({ params }: { params: Promise<{ customerId: string }> }) {
 	const { customerId } = await params;
-	return <CustomerDetailsView customerId={decodeURIComponent(customerId)} />;
+	return <UserDetailView id={decodeURIComponent(customerId)} />;
 }

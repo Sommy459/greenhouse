@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ProductListing } from "@/features/catalog/components/ProductListing";
-import { Newsletter } from "@/features/home/components/Newsletter";
 import { CATEGORY_LINKS } from "@/lib/navigation";
 import { shopRoutes } from "@/lib/routes";
+import { Newsletter } from "@/features/home/components/Newsletter";
 
 const categoryFor = (slug: string) => CATEGORY_LINKS.find((c) => c.href === shopRoutes.CATEGORY(slug));
 

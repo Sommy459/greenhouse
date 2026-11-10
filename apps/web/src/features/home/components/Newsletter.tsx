@@ -42,8 +42,9 @@ function NewsletterForm() {
 	const [error, setError] = useState<string | null>(null);
 
 	const subscribe = useMutation({
+		retry: false,
 		mutationFn: async (value: string) =>
-			(await api.post(backendRoutes.NEWSLETTER, { email: value })).data as { message?: string },
+			(await api.post(backendRoutes.NEWSLETTER, { email: value, source: "footer" })).data as { message?: string },
 		onSuccess: (data) => {
 			toast.success(data?.message ?? "You're subscribed.");
 			setEmail("");

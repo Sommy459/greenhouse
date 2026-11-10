@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
-import { useSession } from "@/features/auth/session";
+import { isSignedIn, useSession } from "@/features/auth/session";
 import type { Product } from "@/features/catalog/types";
 import { useToggleWishlist, useWishlist } from "@/features/wishlist/hooks";
 import { authRoutes } from "@/lib/routes";
@@ -11,13 +11,13 @@ import { authRoutes } from "@/lib/routes";
 export function WishlistButton({ product, className = "" }: { product: Product; className?: string }) {
 	const router = useRouter();
 	const pathname = usePathname();
-	const token = useSession((s) => s.token);
+	const signedIn = useSession(isSignedIn);
 	const { data: saved } = useWishlist();
 	const toggle = useToggleWishlist();
 	const isSaved = !!saved?.some((p) => p.id === product.id);
 
 	const onClick = () => {
-		if (!token) {
+		if (!signedIn) {
 			router.push(authRoutes.SIGN_IN(pathname));
 			return;
 		}
@@ -30,7 +30,7 @@ export function WishlistButton({ product, className = "" }: { product: Product; 
 			onClick={onClick}
 			disabled={toggle.isPending}
 			aria-pressed={isSaved}
-			aria-label={isSaved ? `Remove ${product.name} from wishlist` : `Save ${product.name} to wishlist`}
+			aria-label={isSaved ? `Remove ${product.title} from wishlist` : `Save ${product.title} to wishlist`}
 			className={`grid size-8 place-items-center rounded-full bg-primary-500 text-white transition-colors hover:bg-primary-400 ${className}`}
 		>
 			<Heart className={isSaved ? "size-4 fill-current" : "size-4"} />

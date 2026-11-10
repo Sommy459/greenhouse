@@ -1,49 +1,43 @@
-/** A product as the admin sees it, across every shop (placeholder shape until matched to the API). Prices are whole naira. */
+/** The catalogue as admins see it (PRD A5). Prices are US cents. */
+import type { Money } from "@/lib/format";
+
+export type { Paginated } from "@/lib/api/client";
+
+export type ModerationStatus = "visible" | "hidden" | "removed";
+
+/** A row of GET /admin/products, and every moderation call's answer. */
 export interface AdminProduct {
 	id: string;
-	name: string;
-	category: string;
-	price: number;
+	slug: string;
+	title: string;
 	description: string;
-	image_url: string | null;
-	sold: number;
-	/** Units in stock. */
-	quantity: number;
-	created_at: string;
-	/** Moderation (PRD A5): hidden products stay in the console but customers don't see them. */
-	visibility: ProductVisibility;
-	/** Why an admin hid it; the vendor sees this. */
-	hidden_reason: string | null;
-	/** The shop selling it; null for a product Fysi added itself. */
-	vendor: { id: string; shop_name: string } | null;
+	price: Money;
+	stock: number;
+	category: { id: string; name: string; slug: string } | null;
+	certifications: { id: string; name: string }[];
+	badge: "certified" | "fysi_reviewed" | null;
+	/** The vendor's own switch. */
+	status: "active" | "hidden";
+	moderationStatus: ModerationStatus;
+	/** Shown to the vendor. */
+	moderationReason: string | null;
+	isPublic: boolean;
+	images: { id: string; url: string | null; position: number }[];
+	createdAt: string;
+	updatedAt: string;
+	vendorId: string;
+	vendorName: string | null;
+	vendorSlug: string | null;
+	/** Set when the vendor deleted it (listed only with includeDeleted). */
+	deletedAt: string | null;
 }
 
-export const PRODUCT_VISIBILITIES = ["visible", "hidden"] as const;
-export type ProductVisibility = (typeof PRODUCT_VISIBILITIES)[number];
-
-export type ProductSort = "newest" | "best_selling" | "price_low" | "price_high";
-
-export interface ProductListParams {
-	search?: string;
-	sort?: ProductSort;
-	/** Comma-separated visibilities. */
-	visibility?: string;
-	page: number;
-	limit: number;
-	/** ISO dates, inclusive. */
-	from?: string;
-	to?: string;
-}
-
-export interface Category {
+/** GET /admin/categories (all, including inactive ones). */
+export interface AdminCategory {
 	id: string;
 	name: string;
 	slug: string;
-	description: string | null;
-	thumbnail_url: string | null;
-}
-
-export interface Paginated<T> {
-	items: T[];
-	meta: { page: number; total_pages: number; total: number };
+	isActive: boolean;
+	sortOrder: number;
+	productCount: number;
 }

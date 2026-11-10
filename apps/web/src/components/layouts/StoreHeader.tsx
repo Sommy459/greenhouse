@@ -2,14 +2,28 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
-import { ChevronDown, Heart, Mail, Menu, Pencil, Phone, Search, ShoppingBag, ShoppingCart, UserRound, X } from "lucide-react";
+import {
+	ChevronDown,
+	Heart,
+	Mail,
+	Menu,
+	Pencil,
+	Phone,
+	Search,
+	Settings,
+	ShoppingBag,
+	ShoppingCart,
+	UserRound,
+	Wallet,
+	X,
+} from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@repo/ui/sheet";
 import { Logo } from "@/components/Logo";
 import { CartDrawer } from "@/features/cart/components/CartDrawer";
 import { useCartDrawer } from "@/features/cart/drawer";
 import { useCart, cartCount } from "@/features/cart/store";
-import { useSession } from "@/features/auth/session";
+import { isSignedIn, useSession } from "@/features/auth/session";
 import { CATEGORY_LINKS, HEADER_LINKS, HEADER_MENU_LINKS } from "@/lib/navigation";
 import { aboutRoutes, accountRoutes, authRoutes, shopRoutes, supportRoutes } from "@/lib/routes";
 import { SITE_NAME, SUPPORT_PHONE, VENDOR_URL } from "@/lib/site";
@@ -22,8 +36,8 @@ const hydrated = () => useCart.persist.hasHydrated();
 export function StoreHeader() {
 	const ready = useSyncExternalStore(subscribe, hydrated, () => false);
 	const count = cartCount(useCart((s) => s.items));
-	const token = useSession((s) => s.token);
-	const signedIn = ready && !!token;
+	const hasSession = useSession(isSignedIn);
+	const signedIn = ready && hasSession;
 
 	return (
 		<header className="bg-white">
@@ -256,6 +270,8 @@ function MenuSheet({ signedIn }: { signedIn: boolean }) {
 		{ label: "Inbox", href: accountRoutes.INBOX, icon: Mail },
 		{ label: "Reviews", href: accountRoutes.REVIEWS, icon: Pencil },
 		{ label: "Wishlists", href: accountRoutes.WISHLIST, icon: Heart },
+		{ label: "Wallet", href: accountRoutes.WALLET, icon: Wallet },
+		{ label: "Settings", href: accountRoutes.SETTINGS, icon: Settings },
 	];
 	const more = [
 		{ label: "About Us", href: aboutRoutes.ABOUT },

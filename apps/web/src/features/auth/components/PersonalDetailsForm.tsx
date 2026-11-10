@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@repo/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
-import { useSavePersonalDetails } from "@/features/auth/hooks";
+import { useRegister, useSignUpDraft } from "@/features/auth/hooks";
 import {
 	DIAL_CODES,
 	PersonalDetailsSchema,
@@ -13,27 +15,32 @@ import {
 	splitPhoneNumber,
 	type PersonalDetailsValues,
 } from "@/features/auth/schema";
-import { useSession } from "@/features/auth/session";
 import { AUTH_FIELD, AUTH_LABEL, AUTH_SUBMIT } from "@/features/auth/styles";
+import { authRoutes } from "@/lib/routes";
 
-/** Figma "Personal Details": first and last name, and a phone number with a country-code picker. */
+/**
+ * Figma "Personal Details", the last sign-up step: name and phone, then the account is created with the email and
+ * password from the earlier steps and the API emails a 6-digit code.
+ */
 export function PersonalDetailsForm() {
-	const user = useSession((s) => s.user);
-	const save = useSavePersonalDetails();
+	const router = useRouter();
+	const next = useSearchParams().get("next");
+	const draft = useSignUpDraft();
+	const register = useRegister();
 	const form = useForm<PersonalDetailsValues>({
 		resolver: zodResolver(PersonalDetailsSchema),
-		// Pre-filled from the account: a customer who signed up with their phone has it already.
-		defaultValues: {
-			first_name: user?.first_name ?? "",
-			last_name: user?.last_name ?? "",
-			...splitPhoneNumber(user?.phone_number),
-		},
+		defaultValues: { first_name: "", last_name: "", ...splitPhoneNumber(undefined) },
 	});
 
 	const dialCode = useWatch({ control: form.control, name: "dial_code" });
 
+	// The email and password live in memory only: after a reload, sign-up starts again.
+	useEffect(() => {
+		if (!draft.email || !draft.password) router.replace(authRoutes.SIGN_UP(next));
+	}, [draft.email, draft.password, router, next]);
+
 	const onSubmit = ({ first_name, last_name, dial_code, phone }: PersonalDetailsValues) =>
-		save.mutate({ first_name: first_name.trim(), last_name: last_name.trim(), phone_number: fullPhoneNumber(dial_code, phone) });
+		register.mutate({ name: `${first_name.trim()} ${last_name.trim()}`, phone: fullPhoneNumber(dial_code, phone) });
 
 	return (
 		<div>
@@ -98,7 +105,7 @@ export function PersonalDetailsForm() {
 						)}
 					/>
 
-					<Button type="submit" isLoading={save.isPending} className={`${AUTH_SUBMIT} mt-4 lg:mt-3`}>
+					<Button type="submit" isLoading={register.isPending} className={`${AUTH_SUBMIT} mt-4 lg:mt-3`}>
 						Continue
 					</Button>
 				</form>

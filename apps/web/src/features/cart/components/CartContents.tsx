@@ -8,7 +8,8 @@ import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/lib/utils";
 import { cartCount, cartSubtotal, useCart, type CartItem } from "@/features/cart/store";
 import { checkoutRoutes, shopRoutes } from "@/lib/routes";
-import { formatPrice } from "@/lib/site";
+import { useCartPreview, type PricedCart } from "@/features/cart/sync";
+import { price } from "@/lib/format";
 
 /** The cart is persisted in the browser: render it once it's read, so server and client agree. */
 const subscribe = (onChange: () => void) => useCart.persist.onFinishHydration(onChange);
@@ -23,14 +24,17 @@ interface Props {
 }
 
 /**
- * Figma "My Cart" (C5): title with the item count, each item (photo, name, price, chosen options, quantity, remove),
- * the subtotal and Checkout. Used by the cart overlay and the /cart page. Prices are for display: the API reprices the
- * order at checkout.
+ * Figma "My Cart" (C4): title with the item count, each item (photo, name, price, quantity, remove), the subtotal and
+ * Checkout. The API prices the cart and checks stock (POST /cart/preview): its subtotal and any stock problem show here.
+ * Used by the cart overlay and the /cart page.
  */
 export function CartContents({ onNavigate, headerAction, className }: Props) {
 	const ready = useSyncExternalStore(subscribe, hydrated, () => false);
 	const items = useCart((s) => s.items);
 	const count = ready ? cartCount(items) : 0;
+	const preview = useCartPreview(ready ? items : []);
+	const priced = preview.data;
+	const blocked = !!priced && !priced.readyForCheckout;
 
 	return (
 		<div className={cn("flex flex-col", className)}>
@@ -62,21 +66,41 @@ export function CartContents({ onNavigate, headerAction, className }: Props) {
 				<>
 					<ul className="mt-6 space-y-6 lg:mt-[52px] lg:space-y-7">
 						{items.map((item, i) => (
-							<CartItemRow key={item.product_id} item={item} onNavigate={onNavigate} index={i} />
+							<CartItemRow
+								key={item.product_id}
+								item={item}
+								line={priced?.items.find((l) => l.productId === item.product_id)}
+								onNavigate={onNavigate}
+								index={i}
+							/>
 						))}
 					</ul>
 
 					<div className="mt-6 flex items-center justify-between border-y border-grey-600 py-5 lg:mt-7 lg:py-8">
 						<span className="text-base text-grey-800 lg:text-lg">Subtotal:</span>
-						<span className="text-lg font-semibold text-ink lg:text-xl">{formatPrice(cartSubtotal(items))}</span>
+						<span className="text-lg font-semibold text-ink lg:text-xl">{price(priced?.subtotal ?? cartSubtotal(items))}</span>
 					</div>
-					<p className="mt-2 text-xs text-grey-800">Delivery and any discount code are added at checkout.</p>
+					<p className="mt-2 text-xs text-grey-800">
+						Paid in USDC on Stellar (1 USDC = $1).
+						{priced && priced.vendorCount > 1 && ` From ${priced.vendorCount} shops, in one payment.`}
+					</p>
+					{blocked && (
+						<p role="alert" className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-700">
+							Some items changed. Fix the ones marked above to check out.
+						</p>
+					)}
 
-					<Button asChild className="mt-5 h-[50px] w-full rounded-lg text-lg font-semibold lg:mt-6 lg:h-[55px]">
-						<Link href={checkoutRoutes.CHECKOUT} onClick={onNavigate}>
+					{blocked ? (
+						<Button disabled className="mt-5 h-[50px] w-full rounded-lg text-lg font-semibold lg:mt-6 lg:h-[55px]">
 							Checkout
-						</Link>
-					</Button>
+						</Button>
+					) : (
+						<Button asChild className="mt-5 h-[50px] w-full rounded-lg text-lg font-semibold lg:mt-6 lg:h-[55px]">
+							<Link href={checkoutRoutes.CHECKOUT} onClick={onNavigate}>
+								Checkout
+							</Link>
+						</Button>
+					)}
 				</>
 			)}
 		</div>
@@ -88,11 +112,14 @@ export function CartContents({ onNavigate, headerAction, className }: Props) {
  */
 export function CartItemRow({
 	item,
+	line,
 	onNavigate,
 	variant = "cart",
 	index = 0,
 }: {
 	item: CartItem;
+	/** The API's price and stock check for this line (from the preview), when known. */
+	line?: PricedCart["items"][number];
 	onNavigate?: () => void;
 	variant?: "cart" | "checkout";
 	/** Position in the list: items rise in one after another. */
@@ -100,7 +127,7 @@ export function CartItemRow({
 }) {
 	const setQuantity = useCart((s) => s.setQuantity);
 	const remove = useCart((s) => s.remove);
-	const options = Object.entries(item.options ?? {});
+	const max = line?.maxQuantity;
 	const checkout = variant === "checkout";
 
 	return (
@@ -146,19 +173,18 @@ export function CartItemRow({
 						{item.name}
 					</Link>
 					<span className="shrink-0 text-[15px] font-semibold text-ink lg:text-base">
-						{formatPrice(item.price * item.quantity)}
+						{price(line?.lineTotal ?? item.price * item.quantity)}
 					</span>
 				</div>
 
-				{options.length > 0 && (
-					<dl className="mt-2 space-y-0.5 text-xs text-grey-800 lg:mt-3 lg:text-sm">
-						{options.map(([name, value]) => (
-							<div key={name}>
-								<dt className="inline">{name} : </dt>
-								<dd className="inline text-grey-900">{value}</dd>
-							</div>
-						))}
-					</dl>
+				{line?.issue && (
+					<p role="alert" className="mt-2 text-xs font-medium text-error-500 lg:text-sm">
+						{line.issue === "unavailable"
+							? "No longer available: remove it to check out."
+							: line.issue === "out_of_stock"
+								? "Sold out: remove it to check out."
+								: `Only ${line.maxQuantity} left: lower the quantity.`}
+					</p>
 				)}
 
 				<div className="mt-auto flex items-center justify-between gap-2 pt-3">
@@ -177,6 +203,7 @@ export function CartItemRow({
 						<button
 							type="button"
 							onClick={() => setQuantity(item.product_id, item.quantity + 1)}
+							disabled={max != null && item.quantity >= max}
 							aria-label={`Increase ${item.name} quantity`}
 							className="grid size-6 place-items-center rounded-full text-primary-400 hover:bg-grey-600"
 						>

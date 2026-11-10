@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { authRoutes } from "@/lib/routes";
-import { isExpired, useSession } from "@/features/auth/session";
+import { isSignedIn, useSession } from "@/features/auth/session";
 
 /** The persisted session is only readable in the browser; render nothing until it is. */
 const subscribe = (onChange: () => void) => useSession.persist.onFinishHydration(onChange);
@@ -14,9 +14,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const ready = useSyncExternalStore(subscribe, hydrated, () => false);
-	const token = useSession((s) => s.token);
-	const expiresAt = useSession((s) => s.expiresAt);
-	const signedIn = !!token && !isExpired(expiresAt);
+	const signedIn = useSession(isSignedIn);
 
 	useEffect(() => {
 		if (ready && !signedIn) router.replace(authRoutes.SIGN_IN(pathname));

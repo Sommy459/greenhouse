@@ -1,134 +1,164 @@
 "use client";
 
 import clsx from "clsx";
-import { useState } from "react";
-import { Share } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@repo/ui/button";
+import { Skeleton } from "@repo/ui/skeleton";
+import { ExportButton } from "@/components/ExportButton";
 import { ListHeader } from "@/components/ListHeader";
 import { Pagination } from "@/components/Pagination";
 import { SearchBox } from "@/components/SearchBox";
-import { StatusFilter } from "@/components/StatusFilter";
-import { VendorsTable } from "@/features/vendors/components/VendorsTable";
-import { useAdminVendors, useExportVendors } from "@/features/vendors/hooks";
-import { VENDOR_STATUS_LABEL } from "@/features/vendors/options";
-import { VENDOR_STATUSES, type VendorTab } from "@/features/vendors/types";
+import { useAdminVendors } from "@/features/vendors/hooks";
+import { day, VENDOR_STATUS_LABEL, VENDOR_STATUS_TONE, waited } from "@/features/vendors/options";
+import { VENDOR_STATUSES, type VendorStatus } from "@/features/vendors/types";
 import { count } from "@/lib/format";
+import { consoleRoutes } from "@/lib/routes";
 import { useUrlParams } from "@/lib/use-url-params";
 
-const PAGE_SIZE = 8;
-const TABS: { value: VendorTab; label: string }[] = [
-	{ value: "all", label: "All Vendors" },
-	{ value: "new", label: "New Vendors" },
-];
+const PAGE_SIZE = 10;
+const TH = "px-3 py-4 text-left text-sm font-medium whitespace-nowrap text-ink";
+const TD = "px-3 py-4 text-sm text-ink";
 
-/**
- * Figma admin "Vendors" (A1, A6): All / New tabs, search, status filter, the vendor table and pages; Export is a CSV.
- * Filtering on "Pending" gives the verification queue.
- */
+/** PRD A1–A2: the verification queue (Pending, how long each has waited) and every vendor by status, with search. */
 export function VendorsView() {
-	const { get, list, page, set } = useUrlParams();
-	const tab: VendorTab = get("tab") === "new" ? "new" : "all";
-	const search = get("search");
-	const statuses = list("status", VENDOR_STATUSES);
-	const [selected, setSelected] = useState<Set<string>>(new Set());
-
-	const filters = { tab: tab === "all" ? undefined : tab, search: search || undefined, status: statuses.join(",") || undefined };
-	const { data, isPending, isError, isFetching, refetch } = useAdminVendors({ ...filters, page, limit: PAGE_SIZE });
-	// The "All Vendors" count: every vendor, whatever the tab, search or filter.
-	const everyone = useAdminVendors({ page: 1, limit: 1 });
-	const exportVendors = useExportVendors();
+	const { get, page, set } = useUrlParams();
+	const status = (VENDOR_STATUSES as readonly string[]).includes(get("status")) ? (get("status") as VendorStatus) : undefined;
+	const q = get("search");
+	const { data, isPending, isError, isFetching, refetch } = useAdminVendors({
+		status,
+		q: q || undefined,
+		page,
+		limit: PAGE_SIZE,
+	});
+	const queue = useAdminVendors({ status: "pending", page: 1, limit: 1 });
 	const vendors = data?.items ?? [];
-	const filtered = !!(search || statuses.length);
 
 	return (
 		<div className="px-4 py-6 lg:px-8 lg:py-7">
-			<ListHeader title="Vendors" crumb="Vendors List">
-				<Button
-					type="button"
-					size="sm"
-					isLoading={exportVendors.isPending}
-					onClick={() => exportVendors.mutate(selected.size > 0 ? { ids: [...selected].join(",") } : filters)}
-					className="h-12 rounded-lg px-5"
-					title={selected.size > 0 ? "Export the ticked vendors" : "Export every vendor in this list"}
-				>
-					<Share className="size-5" aria-hidden />
-					{selected.size > 0 ? `Export ${selected.size}` : "Export"}
-				</Button>
+			<ListHeader title="Vendors" crumb="Vendors">
+				<div className="flex flex-wrap gap-3">
+					<ExportButton kind="vendors" />
+				</div>
 			</ListHeader>
 
-			<div
-				className="animate-rise mt-8 flex flex-wrap items-end justify-between gap-4 lg:mt-14"
-				style={{ "--i": 2 } as React.CSSProperties}
-			>
-				<div role="tablist" aria-label="Vendors" className="flex border-b border-grey-600">
-					{TABS.map((t) => (
+			<div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+				<div
+					role="tablist"
+					aria-label="Vendor status"
+					className="hide-scroll flex max-w-full overflow-x-auto border-b border-grey-600"
+				>
+					{([undefined, ...VENDOR_STATUSES] as (VendorStatus | undefined)[]).map((s) => (
 						<button
-							key={t.value}
+							key={s ?? "all"}
 							type="button"
 							role="tab"
-							aria-selected={tab === t.value}
-							onClick={() => set({ tab: t.value === "all" ? undefined : t.value })}
+							aria-selected={status === s}
+							onClick={() => set({ status: s })}
 							className={clsx(
-								"-mb-px flex items-center gap-2 border-b-2 px-5 pb-3 text-base transition-colors lg:px-6",
-								tab === t.value ? "border-primary-500 text-primary-500" : "border-transparent text-ink hover:text-primary-500",
+								"-mb-px flex shrink-0 items-center gap-2 border-b-2 px-5 pb-3 text-base transition-colors",
+								status === s ? "border-primary-500 text-primary-500" : "border-transparent text-grey-800 hover:text-primary-500",
 							)}
 						>
-							{t.label}
-							{t.value === "all" && everyone.data && (
-								<span className="rounded-full bg-primary-500 px-2 py-px text-xs font-medium text-white">
-									{count(everyone.data.meta.total)}
+							{s ? VENDOR_STATUS_LABEL[s] : "All"}
+							{s === "pending" && !!queue.data?.meta.total && (
+								<span className="rounded-full bg-warning-700 px-2 py-px text-xs font-medium text-white">
+									{count(queue.data.meta.total)}
 								</span>
 							)}
 						</button>
 					))}
 				</div>
-
-				<div className="flex w-full gap-3 sm:w-auto lg:gap-6">
-					<SearchBox
-						value={search}
-						onChange={(value) => set({ search: value || undefined })}
-						placeholder="search vendors"
-						label="Search vendors by shop, name or e-mail"
-						className="sm:w-[300px] lg:w-[380px]"
-					/>
-					<StatusFilter
-						id="vendor-status"
-						options={VENDOR_STATUSES}
-						labels={VENDOR_STATUS_LABEL}
-						value={statuses}
-						onChange={(next) => set({ status: next.join(",") || undefined })}
-					/>
-				</div>
+				<SearchBox
+					value={q}
+					onChange={(v) => set({ search: v || undefined })}
+					placeholder="Shop, owner or email"
+					label="Search vendors"
+					className="w-full sm:w-80"
+				/>
 			</div>
 
-			<div className={clsx("mt-8 transition-opacity lg:mt-12", isFetching && !isPending && "opacity-60")}>
+			<div className={clsx("mt-6 transition-opacity", isFetching && !isPending && "opacity-60")}>
 				{isError ? (
-					<div className="rounded-lg border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
+					<div className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
 						<p>Couldn&apos;t load vendors.</p>
 						<Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
 							Try again
 						</Button>
 					</div>
 				) : !isPending && vendors.length === 0 ? (
-					<div className="rounded-lg border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
-						<p>{filtered ? "No vendors match." : tab === "new" ? "No new vendors in the last 30 days." : "No vendors yet."}</p>
-						{filtered && (
-							<Button variant="outline" size="sm" onClick={() => set({ search: undefined, status: undefined })} className="mt-4">
-								Clear search and filter
-							</Button>
-						)}
-					</div>
+					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
+						{status === "pending" ? "The queue is empty. Nicely done." : "No vendors here."}
+					</p>
 				) : (
-					<>
-						<VendorsTable
-							vendors={vendors}
-							loading={isPending}
-							rows={PAGE_SIZE}
-							selected={selected}
-							onSelectedChange={setSelected}
-						/>
-						{data && (
-							<div className="rounded-b-lg border border-t-0 border-grey-600">
+					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
+						<div className="overflow-x-auto">
+							<table className="w-full min-w-[900px]">
+								<thead className="border-b border-grey-600 bg-grey-500">
+									<tr>
+										{["Shop", "Owner", "Category", "Location", "Status", "Submitted", ""].map((h, i) => (
+											<th key={h || i} scope="col" className={clsx(TH, i === 0 && "pl-6")}>
+												{h}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-grey-600">
+									{isPending
+										? Array.from({ length: 5 }, (_, i) => (
+												<tr key={i}>
+													<td colSpan={7} className="px-6 py-3">
+														<Skeleton className="h-10 w-full" />
+													</td>
+												</tr>
+											))
+										: vendors.map((v) => (
+												<tr key={v.id} className="hover:bg-grey-500">
+													<td className={clsx(TD, "pl-6 font-semibold")}>{v.businessName ?? "—"}</td>
+													<td className={TD}>
+														{v.ownerName}
+														<span className="block text-xs text-grey-800">{v.email}</span>
+													</td>
+													<td className={TD}>{v.categoryName ?? "—"}</td>
+													<td className={TD}>{[v.city, v.state].filter(Boolean).join(", ") || "—"}</td>
+													<td className={TD}>
+														<span
+															className={clsx(
+																"rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap",
+																VENDOR_STATUS_TONE[v.status],
+															)}
+														>
+															{VENDOR_STATUS_LABEL[v.status]}
+														</span>
+														{v.submissionCount > 1 && <span className="ml-2 text-xs text-grey-800">#{v.submissionCount}</span>}
+													</td>
+													<td className={clsx(TD, "whitespace-nowrap")}>
+														{v.submittedAt ? day(v.submittedAt) : "—"}
+														{v.status === "pending" && v.waitingHours != null && (
+															<span
+																className={clsx(
+																	"block text-xs",
+																	v.waitingHours > 48 ? "font-medium text-error-500" : "text-grey-800",
+																)}
+															>
+																waiting {waited(v.waitingHours)}
+															</span>
+														)}
+													</td>
+													<td className="py-4 pr-6 pl-3 text-right">
+														<Link
+															href={consoleRoutes.VENDOR(v.id)}
+															className="text-sm font-medium text-primary-500 hover:underline"
+														>
+															{v.status === "pending" ? "Review" : "View"}
+														</Link>
+													</td>
+												</tr>
+											))}
+								</tbody>
+							</table>
+						</div>
+						{data && data.meta.total_pages > 1 && (
+							<div className="border-t border-grey-600">
 								<Pagination
 									page={data.meta.page}
 									totalPages={data.meta.total_pages}
@@ -136,7 +166,7 @@ export function VendorsView() {
 								/>
 							</div>
 						)}
-					</>
+					</div>
 				)}
 			</div>
 		</div>

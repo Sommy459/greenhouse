@@ -11,6 +11,43 @@ Status: **Built** = real UI matching the PRD; **Rework** = built, but the new PR
 ready, no UI; **Scaffold** = route exists with `<PagePlaceholder>`; **Not started** = no route yet; **Backend** = no
 frontend work.
 
+## Connected to the Fysi API (2026-11-10)
+
+All three apps call https://fysi-backend-production.up.railway.app/api/v1 (through each app's `/api/v1` proxy) and the
+browser mocks are gone. Where the UI and the API differed, the UI follows the API.
+
+- **Storefront**: sign up (email → password → name and phone → register → 6-digit code), sign in, forgot/reset password;
+  catalogue (6 API categories, filters: category, price range, certified, in stock; sort newest/best match/price); store
+  pages (`/stores/[slug]`); cart priced by the API; checkout (delivery address with state) → payment step
+  (`/checkout/pay/[id]`: Fysi wallet + PIN, Freighter, SEP-7 QR, payment link; 15-minute hold) → thank-you with tx links;
+  pay-link page (`/pay/[token]`); orders split per vendor with Confirm delivery and Report a problem; Fysi wallet
+  (`/account/wallet`: create with PIN, deposit QR, activity, change PIN); settings (name, phone, photo, password).
+- **Vendor Hub**: sign up (register as vendor) → code → **2FA setup** (`/two-factor`) → onboarding (business profile,
+  logo, documents, submit; rejected → fix and resubmit) → pending; products (create/edit with photos, hide/show, delete,
+  moderation reasons); orders (processing → shipped with courier + tracking → delivered; escrow and payout shown);
+  wallet (`/wallet`: available, escrow, withdrawable today, history, Withdraw with password + emailed code); dashboard
+  built from wallet, orders and products.
+- **Admin**: sign in with 2FA; overview (work queues, volume per day/week); vendors (queue, review documents, approve
+  with verified labels and founding-vendor flag, reject/suspend with reason, reinstate); products (moderation) and
+  categories; orders (vendor orders by escrow, release or refund with reason); payments (incoming, refund flagged ones;
+  transfers, retry failed); users (suspend/restore, reset 2FA); audit log; admin team (super admins invite admins);
+  settings.
+- **Backend update (later on 2026-11-10), now built**:
+  - Storefront: wishlist (`/wishlist`), product reviews (summary, sort, pages; write/edit from `/account/reviews`),
+    inbox (`/account/inbox`: read, mark all, delete), saved addresses (`/account/addresses`, picked at checkout),
+    support tickets (`/help/report` → `/account/support`), newsletter sign-up, sale prices (`originalPrice`,
+    `discountPercent`), 2FA optional.
+  - Vendor Hub: dashboard from `/vendor/dashboard` + 12-month sales chart; `/analytics` (KPIs with change, chart, top
+    products, per-product stats, products CSV); `/statements` (running balance, CSV); `/promotions` (list by state,
+    new/edit, pause/resume/end, sales stats); `/reviews`; cancel an order before shipping with a reason; orders CSV.
+  - Admin: `/analytics`; `/support` help desk (reply, status, priority, assign); `/reviews` moderation (hide with
+    reason / show); `/announcements`; `/newsletter` (subscribers, email campaigns: draft, test, send/schedule,
+    cancel); add/edit a product for a vendor (dialog on Products, with photos); delete a customer account; CSV exports
+    on Users, Vendors, Orders, Payments, Products, Newsletter and Support.
+- **Still removed (no API)**: colour/popularity filters and collections other than New in and Certified, Track Orders.
+- **To ask the backend**: product photos on order lines; a status filter on
+  `GET /orders`; email change; whether customers should get 2FA in the storefront.
+
 ## The MVP in one paragraph
 
 A marketplace for certified eco-friendly products, every payment settled in **USDC on Stellar** (testnet for build,

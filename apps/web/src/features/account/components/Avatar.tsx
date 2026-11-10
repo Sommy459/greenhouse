@@ -4,11 +4,13 @@ import type { User } from "@/features/auth/types";
 
 /** The profile photo, or the initials until there is one. `src` overrides it (a photo being chosen in Settings). */
 export function Avatar({ user, src, className }: { user: User | null; src?: string | null; className?: string }) {
-	const photo = src ?? user?.avatar_url ?? null;
+	const photo = src ?? user?.avatarUrl ?? null;
 	const initials =
-		[user?.first_name, user?.last_name]
+		(user?.name ?? "")
+			.split(/\s+/)
 			.filter(Boolean)
-			.map((n) => n!.charAt(0).toUpperCase())
+			.slice(0, 2)
+			.map((n) => n.charAt(0).toUpperCase())
 			.join("") || "?";
 	return (
 		<span

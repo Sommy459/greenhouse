@@ -1,314 +1,179 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import clsx from "clsx";
-import { useRef } from "react";
-import { Controller, useForm, type FieldError } from "react-hook-form";
-import { Share } from "lucide-react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { Skeleton } from "@repo/ui/skeleton";
+import { Input } from "@repo/ui/input";
+import { ListHeader } from "@/components/ListHeader";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useAdminProfile, useDeleteAvatar, useUpdateProfile, useUploadAvatar } from "@/features/settings/hooks";
-import { AVATAR_MAX_BYTES, AVATAR_TYPES, profileSchema, type ProfileInput, type ProfileValues } from "@/features/settings/schema";
-import { GENDERS, type AdminProfile } from "@/features/settings/types";
-import { saveCsv } from "@/lib/api/download";
+import { useSession } from "@/features/auth/session";
+import type { User } from "@/features/auth/types";
+import { api, errorMessage } from "@/lib/api/client";
+import { backendRoutes } from "@/lib/routes";
 import { useToast } from "@/lib/use-toast";
 
-const INPUT =
-	"h-[60px] w-full rounded-md border bg-transparent px-5 text-base text-ink outline-none placeholder:text-grey-800 focus:border-primary-500 focus:ring-[3px] focus:ring-primary-300/30 disabled:bg-grey-500 disabled:text-grey-900";
-const border = (error?: FieldError) => (error ? "border-error-500" : "border-grey-600");
-const GENDER_LABEL = { female: "Female", male: "Male" } as const;
+const CARD = "rounded-xl border border-grey-600 bg-white p-5 lg:p-6";
+const PASSWORD_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-const toInput = (p: AdminProfile): ProfileInput => ({
-	first_name: p.first_name,
-	last_name: p.last_name,
-	email: p.email,
-	phone_number: p.phone_number,
-	gender: p.gender,
-	address: p.address,
-});
-
-/** Figma "Export" on Settings: the admin's saved details, as a CSV (built here; the profile is already loaded). */
-function exportProfile(p: AdminProfile) {
-	saveCsv(
-		[
-			["Admin Id", "First name", "Last name", "Email", "Phone", "Gender", "Residential address"],
-			[p.admin_code, p.first_name, p.last_name, p.email, p.phone_number, p.gender ?? "", p.address],
-		],
-		"fysi-admin-profile",
-	);
-}
-
-/** Figma admin "Settings": the signed-in admin's photo and details, and Export. */
+/** The admin's own account: name, phone and photo (PATCH /auth/me), password, and two-factor status. */
 export function SettingsView() {
-	const { data: profile, isPending, isError, refetch } = useAdminProfile();
-
 	return (
 		<div className="px-4 py-6 lg:px-8 lg:py-7">
-			<div className="flex flex-wrap items-start justify-between gap-4">
-				<h1 className="animate-rise text-2xl font-medium text-ink lg:text-[28px]">Settings</h1>
-				<Button
-					type="button"
-					size="sm"
-					disabled={!profile}
-					onClick={() => profile && exportProfile(profile)}
-					className="animate-rise h-12 rounded-lg px-5"
-					style={{ "--i": 1 } as React.CSSProperties}
-					title="Download your saved details as a CSV"
-				>
-					<Share className="size-5" aria-hidden />
-					Export
-				</Button>
+			<ListHeader title="Settings" crumb="Settings" />
+			<div className="mt-8 grid max-w-3xl gap-6">
+				<Profile />
+				<Password />
+				<TwoFactor />
 			</div>
-			{isError ? (
-				<div className="mt-10 rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">
-					<p>Couldn&apos;t load your details.</p>
-					<Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
-						Try again
-					</Button>
-				</div>
-			) : isPending ? (
-				<div className="mt-10 max-w-[1500px] space-y-8 lg:mt-14">
-					<Skeleton className="size-32 rounded-full lg:size-40" />
-					<div className="grid gap-8 md:grid-cols-2">
-						{Array.from({ length: 4 }, (_, i) => (
-							<Skeleton key={i} className="h-[60px] w-full" />
-						))}
-					</div>
-				</div>
-			) : (
-				<>
-					<AvatarSection profile={profile} />
-					<ProfileForm profile={profile} />
-				</>
-			)}
 		</div>
 	);
 }
 
-function AvatarSection({ profile }: { profile: AdminProfile }) {
+function Profile() {
 	const toast = useToast();
-	const input = useRef<HTMLInputElement>(null);
-	const upload = useUploadAvatar();
-	const remove = useDeleteAvatar();
-	const name = `${profile.first_name} ${profile.last_name}`;
-
-	const pick = (file: File | undefined) => {
-		if (!file) return;
-		if (!AVATAR_TYPES.includes(file.type)) return toast.error("Choose a PNG, JPG or WebP image.");
-		if (file.size > AVATAR_MAX_BYTES) return toast.error("Choose an image under 2MB.");
-		upload.mutate(file);
-	};
-
-	return (
-		<div
-			className="animate-rise mt-10 flex flex-wrap items-center gap-6 lg:mt-14 lg:gap-20"
-			style={{ "--i": 1 } as React.CSSProperties}
-		>
-			<UserAvatar name={name} src={profile.avatar_url} className="size-32 lg:size-40" textClassName="text-4xl" />
-			<div className="flex flex-wrap gap-4">
-				<Button
-					type="button"
-					onClick={() => remove.mutate()}
-					isLoading={remove.isPending}
-					disabled={!profile.avatar_url || upload.isPending}
-					className="h-12 rounded-lg px-5"
-				>
-					Delete Avatar
-				</Button>
-				<Button
-					type="button"
-					variant="ghost"
-					onClick={() => input.current?.click()}
-					isLoading={upload.isPending}
-					disabled={remove.isPending}
-					className="h-12 rounded-lg bg-white px-5 text-grey-900 hover:bg-primary-50 hover:text-primary-500"
-				>
-					Update new avatar
-				</Button>
-				<input
-					ref={input}
-					type="file"
-					accept={AVATAR_TYPES.join(",")}
-					className="sr-only"
-					tabIndex={-1}
-					aria-hidden
-					onChange={(e) => {
-						pick(e.target.files?.[0]);
-						// Lets the same file be chosen again.
-						e.target.value = "";
-					}}
-				/>
-			</div>
-		</div>
-	);
-}
-
-function ProfileForm({ profile }: { profile: AdminProfile }) {
-	const update = useUpdateProfile();
-	const form = useForm<ProfileInput, unknown, ProfileValues>({
-		resolver: zodResolver(profileSchema),
-		// Follows the saved profile (e.g. after Submit) without an effect.
-		values: toInput(profile),
+	const user = useSession((s) => s.user);
+	const setUser = useSession((s) => s.setUser);
+	const [name, setName] = useState(user?.name ?? "");
+	const [phone, setPhone] = useState(user?.phone ?? "");
+	const save = useMutation({
+		mutationFn: async () =>
+			(await api.patch(backendRoutes.ME, { name: name.trim(), phone: phone.trim() || null })).data.data as User,
+		retry: false,
+		onSuccess: (u) => {
+			setUser(u);
+			toast.success("Saved");
+		},
+		onError: (error) => toast.error(errorMessage(error)),
 	});
-	const {
-		register,
-		control,
-		formState: { errors, isDirty },
-	} = form;
-	const onSubmit = form.handleSubmit((values) => update.mutate(values));
+	const photo = useMutation({
+		mutationFn: async (file: File) => {
+			const data = new FormData();
+			data.set("avatar", file);
+			return (await api.put(backendRoutes.AVATAR, data, { headers: { "Content-Type": "multipart/form-data" } })).data
+				.data as User;
+		},
+		retry: false,
+		onSuccess: (u) => setUser(u),
+		onError: (error) => toast.error(errorMessage(error, "Couldn't upload the photo.")),
+	});
 
 	return (
 		<form
 			noValidate
-			onSubmit={onSubmit}
-			className="animate-rise mt-10 max-w-[1500px] space-y-8 lg:mt-12"
-			style={{ "--i": 2 } as React.CSSProperties}
+			className={CARD}
+			onSubmit={(e) => {
+				e.preventDefault();
+				if (name.trim()) save.mutate();
+			}}
 		>
-			<div className="grid gap-x-10 gap-y-8 md:grid-cols-2">
-				<Field id="first_name" label="First Name" error={errors.first_name}>
+			<h2 className="text-base font-semibold text-ink">Profile</h2>
+			<div className="mt-4 flex items-center gap-4">
+				<UserAvatar name={user?.name ?? ""} src={user?.avatarUrl} className="size-16" />
+				<label className="cursor-pointer rounded-md border border-grey-600 px-3 py-2 text-sm font-medium text-ink hover:border-primary-500">
+					{photo.isPending ? "Uploading…" : "Change photo"}
 					<input
-						id="first_name"
-						autoComplete="given-name"
-						placeholder="first name"
-						className={clsx(INPUT, border(errors.first_name))}
-						{...aria("first_name", errors.first_name)}
-						{...register("first_name")}
+						type="file"
+						accept={PHOTO_TYPES.join(",")}
+						className="sr-only"
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							e.target.value = "";
+							if (file && PHOTO_TYPES.includes(file.type)) photo.mutate(file);
+							else if (file) toast.error("Choose a JPG, PNG or WebP image.");
+						}}
 					/>
-				</Field>
-				<Field id="last_name" label="Last Name" error={errors.last_name}>
-					<input
-						id="last_name"
-						autoComplete="family-name"
-						placeholder="last name"
-						className={clsx(INPUT, border(errors.last_name))}
-						{...aria("last_name", errors.last_name)}
-						{...register("last_name")}
-					/>
-				</Field>
-				<Field id="email" label="Email address" error={errors.email}>
-					<input
-						id="email"
-						type="email"
-						autoComplete="email"
-						placeholder="your email"
-						className={clsx(INPUT, border(errors.email))}
-						{...aria("email", errors.email)}
-						{...register("email")}
-					/>
-				</Field>
-				<Field id="phone_number" label="Phone Number" error={errors.phone_number}>
-					<input
-						id="phone_number"
-						type="tel"
-						autoComplete="tel"
-						placeholder="08012345678"
-						className={clsx(INPUT, border(errors.phone_number))}
-						{...aria("phone_number", errors.phone_number)}
-						{...register("phone_number")}
-					/>
-				</Field>
-
-				<div className="min-w-0 space-y-2.5">
-					<span id="gender-label" className="block text-base font-medium text-ink">
-						Gender
-					</span>
-					<Controller
-						control={control}
-						name="gender"
-						render={({ field }) => (
-							<div role="radiogroup" aria-labelledby="gender-label" className="flex gap-4">
-								{GENDERS.map((g) => (
-									<button
-										key={g}
-										type="button"
-										role="radio"
-										aria-checked={field.value === g}
-										onClick={() => field.onChange(field.value === g ? null : g)}
-										className={clsx(
-											"h-14 rounded-md px-7 text-lg font-medium transition-colors",
-											field.value === g ? "bg-primary-500 text-white" : "bg-white text-grey-800 hover:text-primary-500",
-										)}
-									>
-										{GENDER_LABEL[g]}
-									</button>
-								))}
-							</div>
-						)}
-					/>
-				</div>
-				<Field id="admin_code" label="Admin Id" hint="Set by Fysi; it can't be changed here.">
-					<input
-						id="admin_code"
-						value={profile.admin_code}
-						readOnly
-						disabled
-						aria-describedby="admin_code-hint"
-						className={clsx(INPUT, "border-grey-600")}
-					/>
-				</Field>
+				</label>
 			</div>
-
-			<Field id="address" label="Residential address" error={errors.address} className="max-w-[940px]">
-				<textarea
-					id="address"
-					rows={6}
-					autoComplete="street-address"
-					placeholder="address"
-					className={clsx(INPUT, "h-auto resize-y bg-white py-4", border(errors.address))}
-					{...aria("address", errors.address)}
-					{...register("address")}
-				/>
-			</Field>
-
-			<Button
-				type="submit"
-				isLoading={update.isPending}
-				disabled={!isDirty}
-				className="h-14 w-full rounded-lg text-lg sm:w-[390px]"
-			>
-				Submit
+			<div className="mt-4 grid gap-4 sm:grid-cols-2">
+				<label className="grid gap-1.5 text-sm font-medium text-ink">
+					Name
+					<Input value={name} onChange={(e) => setName(e.target.value)} className="h-11" />
+				</label>
+				<label className="grid gap-1.5 text-sm font-medium text-ink">
+					Phone
+					<Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-11" />
+				</label>
+				<p className="text-sm text-grey-900 sm:col-span-2">Email: {user?.email} (can&apos;t be changed)</p>
+			</div>
+			<Button type="submit" isLoading={save.isPending} disabled={!name.trim()} className="mt-4">
+				Save
 			</Button>
 		</form>
 	);
 }
 
-const aria = (id: string, error?: FieldError) => ({
-	"aria-invalid": !!error,
-	"aria-describedby": error ? `${id}-error` : undefined,
-});
-
-function Field({
-	id,
-	label,
-	error,
-	hint,
-	className,
-	children,
-}: {
-	id: string;
-	label: string;
-	error?: FieldError;
-	hint?: string;
-	className?: string;
-	children: React.ReactNode;
-}) {
+function Password() {
+	const toast = useToast();
+	const [current, setCurrent] = useState("");
+	const [next, setNext] = useState("");
+	const [problem, setProblem] = useState<string | null>(null);
+	const change = useMutation({
+		mutationFn: async () => api.post(backendRoutes.CHANGE_PASSWORD, { currentPassword: current, newPassword: next }),
+		retry: false,
+		onSuccess: () => {
+			setCurrent("");
+			setNext("");
+			toast.success("Password changed");
+		},
+		onError: (error) => toast.error(errorMessage(error, "Check your current password.")),
+	});
 	return (
-		<div className={clsx("min-w-0 space-y-2.5", className)}>
-			<label htmlFor={id} className="block text-base font-medium text-ink">
-				{label}
-			</label>
-			{children}
-			{hint && !error && (
-				<p id={`${id}-hint`} className="text-sm text-grey-900">
-					{hint}
-				</p>
-			)}
-			{error && (
-				<p id={`${id}-error`} role="alert" className="text-sm text-error-500">
-					{error.message}
-				</p>
-			)}
-		</div>
+		<form
+			noValidate
+			className={CARD}
+			onSubmit={(e) => {
+				e.preventDefault();
+				if (!current) return setProblem("Enter your current password");
+				if (!PASSWORD_RULE.test(next))
+					return setProblem("At least 8 characters, with an uppercase letter, a lowercase letter and a number");
+				setProblem(null);
+				change.mutate();
+			}}
+		>
+			<h2 className="text-base font-semibold text-ink">Password</h2>
+			<div className="mt-4 grid gap-4 sm:grid-cols-2">
+				<label className="grid gap-1.5 text-sm font-medium text-ink">
+					Current password
+					<Input
+						type="password"
+						autoComplete="current-password"
+						value={current}
+						onChange={(e) => setCurrent(e.target.value)}
+						className="h-11"
+					/>
+				</label>
+				<label className="grid gap-1.5 text-sm font-medium text-ink">
+					New password
+					<Input
+						type="password"
+						autoComplete="new-password"
+						value={next}
+						onChange={(e) => setNext(e.target.value)}
+						className="h-11"
+					/>
+				</label>
+			</div>
+			{problem && <p className="mt-2 text-sm text-error-500">{problem}</p>}
+			<Button type="submit" variant="outline" isLoading={change.isPending} className="mt-4">
+				Change password
+			</Button>
+		</form>
+	);
+}
+
+function TwoFactor() {
+	const user = useSession((s) => s.user);
+	return (
+		<section className={CARD} aria-label="Two-factor sign-in">
+			<p className="flex items-center gap-2 text-base font-semibold text-ink">
+				<ShieldCheck className="size-5 text-primary-500" aria-hidden /> Two-factor sign-in:{" "}
+				{user?.twoFactorEnabled ? "on" : "off"}
+			</p>
+			<p className="mt-1 text-sm text-grey-900">
+				Required for admins. Lost your authenticator? Ask a super admin to reset it from your account page.
+			</p>
+		</section>
 	);
 }

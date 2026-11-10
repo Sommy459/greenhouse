@@ -10,7 +10,7 @@ import { useCart } from "@/features/cart/store";
 import { RecentlyViewedRow } from "@/features/catalog/components/RecentlyViewedRow";
 import type { Product } from "@/features/catalog/types";
 import { useToggleWishlist, useWishlist } from "@/features/wishlist/hooks";
-import { naira } from "@/lib/format";
+import { price } from "@/lib/format";
 import { accountRoutes, shopRoutes } from "@/lib/routes";
 
 /**
@@ -69,7 +69,7 @@ function WishlistRow({ product, index }: { product: Product; index: number }) {
 	const add = useCart((s) => s.add);
 	const openCart = useCartDrawer((s) => s.setOpen);
 	const toggle = useToggleWishlist();
-	const soldOut = product.stock <= 0;
+	const soldOut = !product.inStock;
 
 	const remove = (
 		<button
@@ -80,7 +80,7 @@ function WishlistRow({ product, index }: { product: Product; index: number }) {
 		>
 			<Trash2 className="size-6" aria-hidden />
 			Remove
-			<span className="sr-only">{product.name} from your wishlist</span>
+			<span className="sr-only">{product.title} from your wishlist</span>
 		</button>
 	);
 	const addToCart = (
@@ -95,7 +95,7 @@ function WishlistRow({ product, index }: { product: Product; index: number }) {
 		>
 			<ShoppingCart className="size-6" aria-hidden />
 			{soldOut ? "Sold out" : "Add to Cart"}
-			{!soldOut && <span className="sr-only">: {product.name}</span>}
+			{!soldOut && <span className="sr-only">: {product.title}</span>}
 		</Button>
 	);
 
@@ -109,18 +109,21 @@ function WishlistRow({ product, index }: { product: Product; index: number }) {
 					href={shopRoutes.PRODUCT(product.slug)}
 					className="relative h-[110px] w-[150px] shrink-0 overflow-hidden rounded-lg border border-grey-600 bg-grey-600 lg:h-[124px] lg:w-[146px]"
 				>
-					{product.images[0] ? (
-						<Image src={product.images[0]} alt="" fill sizes="150px" className="object-cover" />
+					{product.imageUrl ? (
+						<Image src={product.imageUrl} alt="" fill unoptimized sizes="150px" className="object-cover" />
 					) : (
 						<Leaf className="absolute inset-0 m-auto size-8 text-grey-700" aria-hidden />
 					)}
-					<span className="sr-only">{product.name}</span>
+					<span className="sr-only">{product.title}</span>
 				</Link>
 				<div className="flex min-w-0 flex-1 flex-col justify-between py-1 lg:py-2">
 					<Link href={shopRoutes.PRODUCT(product.slug)} className="text-lg text-ink hover:text-primary-500 hover:underline">
-						{product.name}
+						{product.title}
 					</Link>
-					<p className="text-xl font-medium text-ink">{naira(product.price)}</p>
+					<p className="text-xl font-medium text-ink">
+						{price(product.price)}
+						{product.originalPrice && <s className="ml-2 text-base font-normal text-grey-800">{price(product.originalPrice)}</s>}
+					</p>
 				</div>
 			</div>
 			{/* Phones: Remove and Add to Cart under a line; wide screens: Add to Cart above Remove on the right. */}

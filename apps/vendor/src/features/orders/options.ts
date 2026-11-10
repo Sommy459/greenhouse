@@ -1,65 +1,46 @@
-import type { OrderStatus, OrderTab, PaymentMethod } from "@/features/orders/types";
+import type { EscrowStatus, OrderStatus, VendorOrder } from "@/features/orders/types";
 
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-	paid: "Paid",
+export const STATUS_LABEL: Record<OrderStatus, string> = {
+	awaiting_payment: "Awaiting payment",
+	paid: "To process",
 	processing: "Processing",
 	shipped: "Shipped",
 	delivered: "Delivered",
 	cancelled: "Cancelled",
-	delivery_failed: "Failed",
-	returned: "Returned",
 };
 
-/** Paid = waiting on you (Figma's amber "Pending" pill). */
-export const ORDER_STATUS_TONE: Record<OrderStatus, string> = {
-	paid: "bg-warning-50 text-warning-700",
-	processing: "bg-info-50 text-info-500",
-	shipped: "bg-lime-100 text-lime-900",
+export const STATUS_TONE: Record<OrderStatus, string> = {
+	awaiting_payment: "bg-grey-500 text-grey-900",
+	paid: "bg-info-50 text-info-500",
+	processing: "bg-warning-50 text-warning-700",
+	shipped: "bg-primary-50 text-primary-500",
 	delivered: "bg-success-50 text-success-700",
 	cancelled: "bg-error-50 text-error-500",
-	delivery_failed: "bg-error-50 text-error-700",
-	returned: "bg-info-50 text-info-700",
 };
 
-export const TAB_LABEL: Record<OrderTab, string> = {
-	all: "All Orders",
-	shipped: "Shipped",
-	cancelled: "Cancelled",
-	delivery_failed: "Delivery Failed",
-	returned: "Returned",
+export const ESCROW_LABEL: Record<EscrowStatus, string> = {
+	pending: "Awaiting payment",
+	held: "Held in escrow",
+	disputed: "On hold: problem reported",
+	released: "Released",
+	paid_out: "Paid to your wallet",
+	refunded: "Refunded to the customer",
+	void: "Void",
 };
 
-export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
-	fysi_wallet: "Fysi wallet",
-	external_wallet: "External wallet",
-	qr_code: "QR code",
-	payment_link: "Payment link",
+/** The next step a vendor can take (PRD V8). */
+export const NEXT_STATUS: Partial<Record<OrderStatus, "processing" | "shipped" | "delivered">> = {
+	paid: "processing",
+	processing: "shipped",
+	shipped: "delivered",
 };
 
-export const SHIPPING_METHOD_LABEL = { door_delivery: "Door Delivery", pickup: "Pickup" } as const;
+export const day = (iso: string) =>
+	new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-/**
- * What a vendor can move an order to (PRD V8). Delivered, Cancelled and Returned are final; Returned is set by Fysi
- * when it refunds. A failed delivery can go out again.
- */
-export const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
-	paid: ["processing", "cancelled"],
-	processing: ["shipped", "cancelled"],
-	shipped: ["delivered", "delivery_failed"],
-	delivery_failed: ["shipped", "cancelled"],
-	delivered: [],
-	cancelled: [],
-	returned: [],
-};
+/** "Bamboo toothbrush + 2 more" */
+export const itemsLabel = (o: VendorOrder) =>
+	o.lines.length ? `${o.lines[0]!.title}${o.lines.length > 1 ? ` + ${o.lines.length - 1} more` : ""}` : "—";
 
-/** How each choice reads in Update status. */
-export const NEXT_LABEL: Partial<Record<OrderStatus, { title: string; hint: string }>> = {
-	processing: { title: "Accept and start packing", hint: "The customer sees the order was accepted." },
-	shipped: { title: "Mark as shipped", hint: "Add the courier and tracking number so the customer can follow it." },
-	delivered: {
-		title: "Mark as delivered",
-		hint: "Your payout is released when the customer confirms, or 7 days after shipping.",
-	},
-	delivery_failed: { title: "Delivery failed", hint: "The courier couldn't deliver. You can ship it again." },
-	cancelled: { title: "Cancel order", hint: "Fysi refunds the customer. Give a reason." },
-};
+/** 500 → "5%" */
+export const percent = (bps: number) => `${Math.round(bps) / 100}%`;

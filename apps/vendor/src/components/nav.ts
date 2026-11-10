@@ -1,4 +1,15 @@
-import { BarChart3, Headphones, House, Package, Settings, ShoppingBag, Ticket, type LucideIcon } from "lucide-react";
+import {
+	BarChart3,
+	Headphones,
+	House,
+	MessageSquareText,
+	Package,
+	Settings,
+	ShoppingBag,
+	Ticket,
+	Wallet,
+	type LucideIcon,
+} from "lucide-react";
 import { consoleRoutes } from "@/lib/routes";
 
 export interface NavLink {
@@ -24,25 +35,19 @@ export const MAIN_NAV: NavItem[] = [
 			{ href: consoleRoutes.NEW_PRODUCT, label: "Add Products" },
 		],
 	},
+	{ href: consoleRoutes.ORDERS, label: "Orders", icon: ShoppingBag },
+	{ href: consoleRoutes.PROMOTIONS, label: "Promotions", icon: Ticket },
+	{ href: consoleRoutes.ANALYTICS, label: "Analytics", icon: BarChart3 },
+	{ href: consoleRoutes.REVIEWS, label: "Reviews", icon: MessageSquareText },
 	{
-		href: consoleRoutes.ORDERS,
-		label: "Orders",
-		icon: ShoppingBag,
+		href: consoleRoutes.WALLET,
+		label: "Wallet",
+		icon: Wallet,
 		children: [
-			{ href: consoleRoutes.ORDERS, label: "All Orders" },
-			{ href: consoleRoutes.TRACK_ORDERS, label: "Track Orders" },
+			{ href: consoleRoutes.WALLET, label: "Balance & Withdraw" },
+			{ href: consoleRoutes.STATEMENTS, label: "Account Statements" },
 		],
 	},
-	{
-		href: consoleRoutes.PROMOTIONS,
-		label: "Discounts & Promotions",
-		icon: Ticket,
-		children: [
-			{ href: consoleRoutes.PROMOTIONS, label: "Promotion Management" },
-			{ href: consoleRoutes.MONITOR_PROMOTIONS, label: "Monitor Promotions" },
-		],
-	},
-	{ href: consoleRoutes.STATEMENTS, label: "Account Statements", icon: BarChart3 },
 ];
 
 export const FOOTER_NAV: NavItem[] = [

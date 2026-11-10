@@ -9,23 +9,23 @@ import { Button } from "@repo/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { PasswordInput } from "@/features/auth/components/PasswordInput";
-import { useCreateAccount } from "@/features/auth/hooks";
+import { useSignUpDraft } from "@/features/auth/hooks";
 import { CreateAccountSchema, type CreateAccountValues } from "@/features/auth/schema";
 import { AUTH_FIELD as FIELD, AUTH_LABEL as LABEL } from "@/features/auth/styles";
 import { authRoutes } from "@/lib/routes";
 
-/** Figma "Create your account": the verified email or phone (read-only, with Edit), password and confirmation. */
+/** Figma "Create your account": the email from step 1 (read-only, with Edit), password and confirmation. */
 export function CreateAccountForm() {
 	const router = useRouter();
 	const params = useSearchParams();
 	const identifier = params.get("identifier") ?? "";
-	const createAccount = useCreateAccount();
+	const setDraft = useSignUpDraft((s) => s.set);
 	const form = useForm<CreateAccountValues>({
 		resolver: zodResolver(CreateAccountSchema),
 		defaultValues: { password: "", confirm_password: "" },
 	});
 
-	// Arrived without a verified email or phone: start again.
+	// Arrived without an email: start again.
 	useEffect(() => {
 		if (!identifier) router.replace(authRoutes.SIGN_UP());
 	}, [identifier, router]);
@@ -40,7 +40,10 @@ export function CreateAccountForm() {
 			<Form {...form}>
 				<form
 					noValidate
-					onSubmit={form.handleSubmit(({ password }) => createAccount.mutate({ identifier, password }))}
+					onSubmit={form.handleSubmit(({ password }) => {
+						setDraft({ email: identifier, password });
+						router.push(authRoutes.PERSONAL_DETAILS(params.get("next")));
+					})}
 					className="mt-9 flex flex-col gap-6 lg:mt-7 lg:gap-5"
 				>
 					<div className="grid gap-2">
@@ -85,11 +88,7 @@ export function CreateAccountForm() {
 						)}
 					/>
 
-					<Button
-						type="submit"
-						isLoading={createAccount.isPending}
-						className="mt-4 h-[50px] rounded-lg text-lg font-semibold lg:mt-3 lg:text-base"
-					>
+					<Button type="submit" className="mt-4 h-[50px] rounded-lg text-lg font-semibold lg:mt-3 lg:text-base">
 						Continue
 					</Button>
 				</form>

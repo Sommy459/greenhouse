@@ -5,7 +5,8 @@ import { Newsletter } from "@/features/home/components/Newsletter";
 
 export const metadata: Metadata = {
 	title: "About Us",
-	description: "Fysi connects eco-conscious shoppers with certified sustainable vendors across Nigeria. Our mission, our vendors and how we certify products.",
+	description:
+		"Fysi connects eco-conscious shoppers with certified sustainable vendors across Nigeria. Our mission, our vendors and how we certify products.",
 };
 
 /** Figma About Us (C12): About, Mission, Vendors, Eco-Certification, Why Fysi?, testimonials, newsletter. */

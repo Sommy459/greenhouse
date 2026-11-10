@@ -1,7 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Heart, LogOut, Mail, Pencil, Settings, ShoppingBag, UserRound } from "lucide-react";
+import {
+	ChevronRight,
+	Heart,
+	LifeBuoy,
+	LogOut,
+	Mail,
+	MapPin,
+	Pencil,
+	Settings,
+	ShoppingBag,
+	UserRound,
+	Wallet,
+} from "lucide-react";
 import { useSignOut } from "@/features/auth/hooks";
 import { useSession } from "@/features/auth/session";
 import { accountRoutes } from "@/lib/routes";
@@ -13,13 +25,16 @@ const MAIN = [
 	{ href: accountRoutes.INBOX, label: "Inbox", icon: Mail },
 	{ href: accountRoutes.REVIEWS, label: "Reviews", icon: Pencil },
 	{ href: accountRoutes.WISHLIST, label: "Wishlist", icon: Heart },
+	{ href: accountRoutes.WALLET, label: "Wallet", icon: Wallet },
+	{ href: accountRoutes.ADDRESSES, label: "Addresses", icon: MapPin },
+	{ href: accountRoutes.SUPPORT, label: "Support", icon: LifeBuoy },
 ];
 
 const ROW = "flex items-center gap-4 px-6 py-5 text-lg text-ink transition-colors";
 
 /** Figma phone "Welcome, John": the account menu as its own page, with Settings and Log Out at the bottom. */
 export function AccountMenu() {
-	const name = useSession((s) => s.user?.first_name);
+	const name = useSession((s) => s.user?.name.split(" ")[0]);
 	const signOut = useSignOut();
 
 	return (

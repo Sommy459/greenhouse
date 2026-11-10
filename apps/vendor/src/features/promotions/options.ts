@@ -1,19 +1,38 @@
-import type { PromotionStatus } from "@/features/promotions/types";
+import type { Promotion, PromotionAction, PromotionState } from "@/features/promotions/types";
 
-export const STATUS_LABEL: Record<PromotionStatus, string> = {
-	open: "Open",
-	ongoing: "Ongoing",
-	cancelled: "Cancelled",
+export const STATE_LABEL: Record<PromotionState, string> = {
+	running: "Running",
+	scheduled: "Scheduled",
+	paused: "Paused",
 	expired: "Expired",
+	ended: "Ended",
 };
 
-export const STATUS_TONE: Record<PromotionStatus, string> = {
-	open: "bg-error-50 text-warning-700",
-	ongoing: "bg-success-50 text-success-700",
-	cancelled: "bg-error-50 text-error-500",
-	expired: "bg-warning-50 text-warning-700",
+export const STATE_TONE: Record<PromotionState, string> = {
+	running: "bg-success-50 text-success-700",
+	scheduled: "bg-info-50 text-info-500",
+	paused: "bg-warning-50 text-warning-700",
+	expired: "bg-grey-500 text-grey-900",
+	ended: "bg-grey-500 text-grey-900",
 };
 
-/** Figma "20 Days", or "1 month". */
-export const period = (days: number) =>
-	days % 30 === 0 ? `${days / 30} month${days === 30 ? "" : "s"}` : `${days} Day${days === 1 ? "" : "s"}`;
+/** What the vendor can do in each state. Expired and ended promotions are finished. */
+export function actionsFor(state: PromotionState): PromotionAction[] {
+	if (state === "running" || state === "scheduled") return ["pause", "end"];
+	if (state === "paused") return ["resume", "end"];
+	return [];
+}
+
+export const ACTION_LABEL: Record<PromotionAction, string> = { pause: "Pause", resume: "Resume", end: "End now" };
+
+/** "12 Nov – 30 Nov 2026" */
+export function dates(p: Pick<Promotion, "startsAt" | "endsAt">) {
+	const a = new Date(p.startsAt);
+	const b = new Date(p.endsAt);
+	const short = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+	return a.getFullYear() === b.getFullYear()
+		? `${short(a)} – ${short(b)} ${b.getFullYear()}`
+		: `${short(a)} ${a.getFullYear()} – ${short(b)} ${b.getFullYear()}`;
+}
+
+export const editable = (state: PromotionState) => state === "scheduled" || state === "running" || state === "paused";

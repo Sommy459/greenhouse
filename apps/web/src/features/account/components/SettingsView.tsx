@@ -10,7 +10,7 @@ import { Button } from "@repo/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { Avatar } from "@/features/account/components/Avatar";
-import { useChangePassword, useUpdateProfile } from "@/features/account/hooks";
+import { useChangePassword, useRemoveAvatar, useUpdateProfile } from "@/features/account/hooks";
 import {
 	ChangePasswordSchema,
 	PASSWORD_HINT,
@@ -49,11 +49,8 @@ export function SettingsView() {
 
 function PersonalInfo() {
 	const user = useSession((s) => s.user);
-	const saved: PersonalInfoValues = {
-		first_name: user?.first_name ?? "",
-		last_name: user?.last_name ?? "",
-		email: user?.email ?? "",
-	};
+	const saved: PersonalInfoValues = { name: user?.name ?? "", phone: user?.phone ?? "" };
+	const removePhoto = useRemoveAvatar();
 	const form = useForm<PersonalInfoValues>({ resolver: zodResolver(PersonalInfoSchema), values: saved });
 	const [photo, setPhoto] = useState<{ file: File; url: string } | null>(null);
 	const [photoError, setPhotoError] = useState<string | null>(null);
@@ -69,7 +66,7 @@ function PersonalInfo() {
 
 	const choose = (file: File | undefined) => {
 		if (!file) return;
-		if (!PHOTO_TYPES.includes(file.type)) return setPhotoError("Choose an SVG, PNG, JPG or GIF image.");
+		if (!PHOTO_TYPES.includes(file.type)) return setPhotoError("Choose a PNG, JPG or WebP image.");
 		if (file.size > PHOTO_MAX_BYTES) return setPhotoError("That image is over 5 MB. Choose a smaller one.");
 		if (photo) URL.revokeObjectURL(photo.url);
 		setPhotoError(null);
@@ -90,17 +87,23 @@ function PersonalInfo() {
 					className={clsx(CARD, "mt-7")}
 				>
 					<div className="grid gap-5 p-5 md:grid-cols-2 md:gap-x-6">
-						<TextField control={form.control} name="first_name" label="First name" autoComplete="given-name" />
-						<TextField control={form.control} name="last_name" label="Last name" autoComplete="family-name" />
+						<TextField control={form.control} name="name" label="Full name" autoComplete="name" />
 						<TextField
 							control={form.control}
-							name="email"
-							label="Email address"
-							type="email"
-							autoComplete="email"
-							icon
-							className="md:col-span-2"
+							name="phone"
+							label="Phone number"
+							type="tel"
+							autoComplete="tel"
+							placeholder="e.g. 0801 234 5678"
 						/>
+						<div className="space-y-1.5 md:col-span-2">
+							<p className={LABEL}>Email address</p>
+							<p className="relative flex h-11 items-center rounded-lg border border-grey-600 bg-grey-500 pr-3.5 pl-11 text-base text-grey-900">
+								<Mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2" aria-hidden />
+								{user?.email}
+							</p>
+							<p className="text-xs text-grey-800">Your sign-in email can&apos;t be changed.</p>
+						</div>
 
 						<div className="flex flex-col gap-5 md:col-span-2 md:flex-row">
 							<Avatar user={user} src={photo?.url} className="size-16 text-xl" />
@@ -138,9 +141,19 @@ function PersonalInfo() {
 										<span className="font-semibold text-primary-500">Click to upload</span> or drag and drop
 									</span>
 									<span id={hintId} className="mt-1 text-xs text-grey-900">
-										{photo ? `${photo.file.name}: saved when you click Save changes` : "SVG, PNG, JPG or GIF (max. 5 MB)"}
+										{photo ? `${photo.file.name}: saved when you click Save changes` : "PNG, JPG or WebP (max. 5 MB)"}
 									</span>
 								</label>
+								{user?.avatarUrl && !photo && (
+									<button
+										type="button"
+										onClick={() => removePhoto.mutate()}
+										disabled={removePhoto.isPending}
+										className="mt-2 text-sm text-error-500 hover:underline disabled:opacity-60"
+									>
+										Remove photo
+									</button>
+								)}
 								{photoError && (
 									<p role="alert" className="mt-2 text-sm text-error-500">
 										{photoError}

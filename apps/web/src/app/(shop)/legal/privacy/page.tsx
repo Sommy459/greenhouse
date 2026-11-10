@@ -6,7 +6,11 @@ export const metadata: Metadata = { title: "Privacy policy" };
 export default function Page() {
 	return (
 		<div className="shop-container">
-			<PagePlaceholder title="Privacy policy" requirements={["C13"]} description="Must be published before launch (Nigeria Data Protection Act)." />
+			<PagePlaceholder
+				title="Privacy policy"
+				requirements={["C13"]}
+				description="Must be published before launch (Nigeria Data Protection Act)."
+			/>
 		</div>
 	);
 }

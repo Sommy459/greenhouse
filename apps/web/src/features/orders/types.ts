@@ -1,95 +1,138 @@
-/** Placeholders until matched to the external API (docs/PLAN.md). Prices are whole naira. */
+/** Orders in the Fysi API (checkout, payment, the account's order pages). Money is US cents; on-chain amounts USDC strings. */
+import type { Money } from "@/lib/format";
 
-/**
- * `paid`: the USDC payment is confirmed and held in escrow. `shipped`: on the way. `delivered`: the customer confirmed
- * (or 7 days passed since shipping), which releases the money to the vendor.
- */
-export const ORDER_STATUSES = [
-	"pending_payment",
-	"paid",
-	"processing",
-	"shipped",
-	"delivered",
-	"cancelled",
-	"delivery_failed",
-	"returned",
+/** The 36 states and the FCT, as the API spells them. */
+export const NIGERIAN_STATES = [
+	"Abia",
+	"Adamawa",
+	"Akwa Ibom",
+	"Anambra",
+	"Bauchi",
+	"Bayelsa",
+	"Benue",
+	"Borno",
+	"Cross River",
+	"Delta",
+	"Ebonyi",
+	"Edo",
+	"Ekiti",
+	"Enugu",
+	"FCT",
+	"Gombe",
+	"Imo",
+	"Jigawa",
+	"Kaduna",
+	"Kano",
+	"Katsina",
+	"Kebbi",
+	"Kogi",
+	"Kwara",
+	"Lagos",
+	"Nasarawa",
+	"Niger",
+	"Ogun",
+	"Ondo",
+	"Osun",
+	"Oyo",
+	"Plateau",
+	"Rivers",
+	"Sokoto",
+	"Taraba",
+	"Yobe",
+	"Zamfara",
 ] as const;
-export type CustomerOrderStatus = (typeof ORDER_STATUSES)[number];
+export type NigerianState = (typeof NIGERIAN_STATES)[number];
 
-/** Orders that ended without the customer keeping them: the USDC goes back to their wallet. */
-export type ClosedStatus = Extract<CustomerOrderStatus, "cancelled" | "delivery_failed" | "returned">;
+export interface DeliveryAddress {
+	recipientName: string;
+	phone: string;
+	line1: string;
+	line2?: string | null;
+	city: string;
+	state: NigerianState;
+	notes?: string | null;
+}
 
-/** Figma "Status History" steps. */
-export const ORDER_STEPS = ["received", "processing", "on_the_way", "delivered"] as const;
-export type OrderStep = (typeof ORDER_STEPS)[number];
+/** The whole order: one payment for everything in the cart. Stock is held (and the payment open) until `expiresAt`. */
+export type OrderStatus = "awaiting_payment" | "paid" | "expired" | "cancelled";
 
-/** How the order was paid (PRD: USDC on Stellar only). */
-export type StellarPaymentMethod = "fysi_wallet" | "external_wallet" | "qr_code" | "payment_link";
+/** One vendor's share of an order, which that vendor ships (PRD V8). */
+export type VendorOrderStatus = "awaiting_payment" | "paid" | "processing" | "shipped" | "delivered" | "cancelled";
 
-export interface CustomerOrderItem {
-	id: string;
-	product_id: string;
-	/** For "Buy Again" and the product link. */
-	slug: string;
-	name: string;
-	image_url: string | null;
+/** Where and how much to pay: the Fysi settlement account, in USDC, with the order number as memo. */
+export interface PaymentInstructions {
+	network: string;
+	networkPassphrase: string;
+	destination: string;
+	assetCode: string;
+	assetIssuer: string;
+	memo: string;
+	/** USDC still due (an underpayment leaves the rest here). */
+	amountDue: string;
+	/** SEP-7 URI for the QR code. */
+	sep7Uri: string;
+	/** The shareable payment link. */
+	payLink: string;
+	expiresAt: string;
+}
+
+export interface OrderLine {
+	productId: string;
+	title: string;
+	unitPrice: Money;
 	quantity: number;
-	/** Unit price paid. */
-	price: number;
-	vendor_name: string | null;
+	lineTotal: Money;
 }
 
-/** `data` of GET /orders/:id (Figma "Order Detail"). */
-export interface CustomerOrder {
+export interface VendorOrder {
 	id: string;
-	/** e.g. FY3020123495. */
-	number: string;
-	created_at: string;
-	status: CustomerOrderStatus;
-	items: CustomerOrderItem[];
-	delivery: {
-		method: "door_delivery" | "pickup";
-		recipient: string;
-		phone_number: string;
-		address: string;
-	};
-	payment: {
-		method: StellarPaymentMethod;
-		/** The USDC actually paid (locked quote). */
-		amount_usdc: number;
-		tx_hash: string;
-		network: "testnet" | "public";
-		paid_at: string;
-	} | null;
-	subtotal: number;
-	discount: number;
-	shipping: number;
-	total: number;
-	/** When each step happened (null: not yet). */
-	timeline: Record<OrderStep, string | null>;
-	/** Set when it was cancelled, couldn't be delivered or was returned. */
-	closed: { status: ClosedStatus; at: string; reason: string; refund_tx_hash: string | null } | null;
-	/** Problems can be reported until 7 days after delivery (PRD C8); null before delivery. */
-	report_until: string | null;
-	/** Still inside that window (the API decides, so the browser clock doesn't matter). */
-	can_report: boolean;
+	vendorName: string;
+	vendorSlug: string | null;
+	status: VendorOrderStatus;
+	subtotal: Money;
+	lines: OrderLine[];
+	carrier: string | null;
+	trackingNumber: string | null;
+	shippedAt: string | null;
+	deliveredAt: string | null;
+	/** When the customer confirmed (releasing the vendor's payout). */
+	confirmedAt: string | null;
+	canConfirmDelivery: boolean;
+	/** Open until 7 days after delivery (PRD C8). */
+	canReportProblem: boolean;
+	problemReason: string | null;
 }
 
-/** A row of GET /orders (Figma "Orders" / "Order History"). */
-export interface CustomerOrderRow {
+export interface OrderTransaction {
+	txHash: string;
+	explorerUrl: string;
+	amount: string;
+	at: string;
+}
+
+/** POST /checkout, GET /orders(/:id) and the payment calls. */
+export interface Order {
 	id: string;
+	/** e.g. FY-1042, also the payment memo. */
 	number: string;
-	created_at: string;
-	status: CustomerOrderStatus;
-	total: number;
-	items_count: number;
-	/** The first product, for the phone cards. */
-	first_item: { name: string; image_url: string | null };
+	status: OrderStatus;
+	total: Money;
+	/** USDC received so far. */
+	paid: string;
+	deliveryAddress: DeliveryAddress;
+	payment: PaymentInstructions;
+	transactions: OrderTransaction[];
+	vendorOrders: VendorOrder[];
+	paidAt: string | null;
+	createdAt: string;
 }
 
-export interface OrderListParams {
-	/** Comma-separated statuses (a tab). */
-	status?: string;
-	page: number;
-	limit: number;
+/** GET /pay/:token: what anyone with the payment link sees. */
+export interface PayLinkOrder {
+	number: string;
+	status: OrderStatus;
+	total: Money;
+	paid: string;
+	items: string[];
+	payment: PaymentInstructions;
 }

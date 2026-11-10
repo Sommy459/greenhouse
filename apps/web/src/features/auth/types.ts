@@ -1,32 +1,38 @@
+/** Shapes of the Fysi API (https://fysi-backend-production.up.railway.app/docs). */
+
 export type Role = "customer" | "vendor" | "admin" | "super_admin";
 
+/** `data` of GET /auth/me (and PATCH /auth/me, PUT /auth/me/avatar). */
 export interface User {
 	id: string;
 	email: string;
-	first_name: string;
-	last_name: string;
-	phone_number: string;
-	/** Profile photo (Settings); null until one is uploaded. */
-	avatar_url?: string | null;
 	role: Role;
-	email_verified: boolean;
-	is_active: boolean;
-	created_at: string;
-	updated_at: string;
+	name: string;
+	phone: string | null;
+	avatarUrl: string | null;
+	twoFactorEnabled: boolean;
+	twoFactorRequired: boolean;
+	vendor: { status: "draft" | "pending" | "approved" | "rejected" | "suspended"; businessName: string | null } | null;
+	createdAt: string;
 }
 
-/** `data` of POST /auth/login and /auth/signup. `expires_in` is a Unix time in seconds. */
-export interface AuthSession {
-	access_token: string;
-	expires_in: number;
-	user: User;
+/** Tokens from verify-email, login, login/2fa and refresh. `expiresIn` is in seconds. */
+export interface TokenSet {
+	accessToken: string;
+	refreshToken: string;
+	tokenType: "Bearer";
+	expiresIn: number;
+	role: Role;
+	mfa: boolean;
+	twoFactorSetupRequired: boolean;
 }
 
-/**
- * `data` of POST /auth/otp/verify (assumed shape, to match against the external API): a session for a returning
- * customer, or `is_new_user` with a token for "Create your account".
- */
-export interface VerifyCodeResult extends Partial<AuthSession> {
-	is_new_user: boolean;
-	verification_token?: string;
+/** `data` of POST /auth/login: tokens, or an `mfaToken` when two-factor sign-in is on. */
+export type LoginResult =
+	({ mfaRequired: false } & TokenSet) | { mfaRequired: true; mfaToken: string; mfaTokenExpiresIn: number };
+
+/** `data` of POST /auth/register, /auth/resend-otp and /auth/forgot-password. */
+export interface CodeSent {
+	otpExpiresInSeconds: number;
+	resendAfterSeconds: number;
 }

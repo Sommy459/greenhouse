@@ -25,7 +25,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 	const section = currentSection(usePathname());
 	const user = useSession((s) => s.user);
 	const signOut = useSignOut();
-	const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
+	const name = user?.name ?? "";
 
 	const onSearch = (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -72,14 +72,25 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 						</button>
 					</PopoverTrigger>
 					<PopoverContent align="end" className="w-72 text-sm">
-						<p className="font-semibold">Notifications</p>
-						<p className="mt-2 text-grey-900">You&apos;re all caught up.</p>
-						<Link
-							href={consoleRoutes.NOTIFICATION_SETTINGS}
-							className="mt-3 inline-block font-medium text-primary-500 hover:underline"
-						>
-							Notification settings
-						</Link>
+						<p className="font-semibold">Work queues</p>
+						<p className="mt-1 text-grey-900">Where your attention is usually needed:</p>
+						<ul className="mt-2 space-y-1.5">
+							<li>
+								<Link href={consoleRoutes.VENDOR_QUEUE} className="font-medium text-primary-500 hover:underline">
+									Vendors waiting for review
+								</Link>
+							</li>
+							<li>
+								<Link href={consoleRoutes.PAYMENTS} className="font-medium text-primary-500 hover:underline">
+									Payments to refund
+								</Link>
+							</li>
+							<li>
+								<Link href={consoleRoutes.ORDERS} className="font-medium text-primary-500 hover:underline">
+									Disputed orders
+								</Link>
+							</li>
+						</ul>
 					</PopoverContent>
 				</Popover>
 
@@ -90,7 +101,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 							aria-label="Account menu"
 							className="rounded-full focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:outline-none"
 						>
-							<UserAvatar name={name} src={user?.avatar_url} className="size-9" />
+							<UserAvatar name={name} src={user?.avatarUrl} className="size-9" />
 						</button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="w-56">
@@ -102,11 +113,6 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
 						<DropdownMenuItem asChild>
 							<Link href={consoleRoutes.SETTINGS}>
 								<Settings /> Settings
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild>
-							<Link href={consoleRoutes.NOTIFICATION_SETTINGS}>
-								<Bell /> Notifications
 							</Link>
 						</DropdownMenuItem>
 						<DropdownMenuItem onSelect={signOut}>

@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Mail, Pencil, Settings, ShoppingBag, UserRound } from "lucide-react";
+import { LifeBuoy, LogOut, Mail, MapPin, Pencil, Settings, ShoppingBag, UserRound, Wallet } from "lucide-react";
 import { useSignOut } from "@/features/auth/hooks";
 import { accountRoutes } from "@/lib/routes";
 
@@ -13,6 +13,9 @@ const NAV = [
 	{ href: accountRoutes.ORDERS, label: "Order History", icon: ShoppingBag },
 	{ href: accountRoutes.INBOX, label: "Inbox", icon: Mail },
 	{ href: accountRoutes.REVIEWS, label: "Reviews", icon: Pencil },
+	{ href: accountRoutes.WALLET, label: "Wallet", icon: Wallet },
+	{ href: accountRoutes.ADDRESSES, label: "Addresses", icon: MapPin },
+	{ href: accountRoutes.SUPPORT, label: "Support", icon: LifeBuoy },
 	{ href: accountRoutes.SETTINGS, label: "Settings", icon: Settings },
 ];
 

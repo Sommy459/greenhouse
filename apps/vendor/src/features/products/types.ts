@@ -1,80 +1,81 @@
-/** Placeholder shapes until matched to the API. Prices are whole naira. */
+/** The shop's products in the Fysi API (PRD V7). Prices are US cents, paid 1:1 in USDC. */
+import type { Money } from "@/lib/format";
+import type { CertificationId } from "@/features/shop/types";
 
-/** `active` = on sale; `inactive` = hidden by the vendor (PRD V7). */
-export type ProductStatus = "active" | "inactive";
+export type { Paginated } from "@/lib/api/client";
 
-/** What the Figma status pill says: worked out from status, stock and admin moderation. */
-export const STOCK_STATES = ["in_stock", "out_of_stock", "inactive", "hidden_by_fysi"] as const;
-export type StockState = (typeof STOCK_STATES)[number];
+/** `active` = on sale; `hidden` = taken off the store by the vendor. */
+export type ProductStatus = "active" | "hidden";
 
-/** A row of GET /vendor/products (Figma "Manage Products"). */
-export interface VendorProduct {
+export interface ProductImage {
 	id: string;
-	name: string;
-	/** Variants beyond the base listing ("3 Variants"); 0 when there's only one. */
-	variants_count: number;
-	/** The vendor's own stock code (Figma "Seller SKU"). */
-	sku: string;
-	price: number;
-	category: string;
-	/** Units in stock, across variants. */
-	quantity: number;
-	status: ProductStatus;
-	/** Set when a Fysi admin hid the listing (PRD A5); the vendor sees why. */
-	moderation: { reason: string; at: string } | null;
-	image_url: string | null;
-	created_at: string;
+	url: string | null;
+	/** 0 is the cover. */
+	position: number;
 }
 
-export type ProductSortKey = "name" | "sku" | "quantity";
-export type ProductSort = `${ProductSortKey}_${"asc" | "desc"}`;
+/** A row of GET /vendor/products, and every product call's answer. */
+export interface VendorProduct {
+	id: string;
+	slug: string;
+	title: string;
+	description: string;
+	price: Money;
+	stock: number;
+	category: { id: string; name: string; slug: string } | null;
+	certifications: { id: CertificationId; name: string }[];
+	badge: "certified" | "fysi_reviewed" | null;
+	status: ProductStatus;
+	/** Admin moderation (PRD A5): `hidden` or `removed` by Fysi, with the reason the vendor sees. */
+	moderationStatus: "visible" | "hidden" | "removed";
+	moderationReason: string | null;
+	/** Whether customers can see it right now. */
+	isPublic: boolean;
+	images: ProductImage[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+/** POST /vendor/products and PATCH /vendor/products/:id (send only what changes). */
+export interface ProductBody {
+	title: string;
+	description: string;
+	priceCents: number;
+	stock: number;
+	categoryId: string;
+	certifications: CertificationId[];
+	status: ProductStatus;
+}
 
 export interface ProductListParams {
-	search?: string;
-	/** Comma-separated stock states. */
-	state?: string;
-	from?: string;
-	to?: string;
-	sort?: ProductSort;
+	status?: ProductStatus;
+	q?: string;
 	page: number;
 	limit: number;
 }
 
-/** `data` of GET /vendor/products/stats; each `change` is a percentage on the previous period. */
-export interface ProductStats {
-	total: number;
-	total_change: number;
-	sold: number;
-	sold_change: number;
-	refunded: number;
-	refunded_change: number;
-	cancelled: number;
-	cancelled_change: number;
+/** The pill a vendor sees: Fysi's moderation first, then their own hide, then stock. */
+export type ProductState = "removed" | "hidden_by_fysi" | "hidden" | "out_of_stock" | "live";
+
+export function productState(p: VendorProduct): ProductState {
+	if (p.moderationStatus === "removed") return "removed";
+	if (p.moderationStatus === "hidden") return "hidden_by_fysi";
+	if (p.status === "hidden") return "hidden";
+	return p.stock > 0 ? "live" : "out_of_stock";
 }
 
-export interface Paginated<T> {
-	items: T[];
-	meta: { page: number; total_pages: number; total: number };
-}
+export const STATE_LABEL: Record<ProductState, string> = {
+	live: "On sale",
+	out_of_stock: "Out of stock",
+	hidden: "Hidden",
+	hidden_by_fysi: "Hidden by Fysi",
+	removed: "Removed by Fysi",
+};
 
-/** The pill for a row. Admin moderation wins, then the vendor's own hide, then stock. */
-export function stockState(p: VendorProduct): StockState {
-	if (p.moderation) return "hidden_by_fysi";
-	if (p.status === "inactive") return "inactive";
-	return p.quantity > 0 ? "in_stock" : "out_of_stock";
-}
-
-/** A storefront category (GET /categories). */
-export interface Category {
-	id: string;
-	name: string;
-	slug: string;
-}
-
-/** One of the shop's own certificates (GET /vendor/certifications), for tagging a product. */
-export interface ShopCertification {
-	id: string;
-	name: string;
-	badge: "certified" | "fysi_reviewed";
-	status: "pending" | "verified" | "rejected" | "revoked";
-}
+export const STATE_TONE: Record<ProductState, string> = {
+	live: "bg-success-50 text-success-700",
+	out_of_stock: "bg-warning-50 text-warning-700",
+	hidden: "bg-grey-500 text-grey-900",
+	hidden_by_fysi: "bg-error-50 text-error-500",
+	removed: "bg-error-50 text-error-500",
+};

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronRight, Leaf, Minus, Plus, ShoppingCart } from "lucide-react";
+import { BadgeCheck, ChevronRight, Leaf, Minus, Plus, ShoppingCart, Store } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { ProductInfoSections } from "@/features/catalog/components/product/ProductInfoSections";
 import { ProductReviews } from "@/features/catalog/components/product/ProductReviews";
@@ -11,17 +11,16 @@ import { RelatedProducts } from "@/features/catalog/components/product/RelatedPr
 import { StarRating } from "@/features/catalog/components/product/StarRating";
 import { useProduct } from "@/features/catalog/hooks";
 import { useRecentlyViewed } from "@/features/catalog/recently-viewed";
-import type { ProductDetail } from "@/features/catalog/types";
+import { BADGE_LABEL, type ProductDetail } from "@/features/catalog/types";
 import { useCartDrawer } from "@/features/cart/drawer";
 import { useCart } from "@/features/cart/store";
 import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
 import { shopRoutes } from "@/lib/routes";
-import { formatPrice } from "@/lib/site";
+import { price } from "@/lib/format";
 
 /**
- * Figma product page (C4, C9, C10): breadcrumb, photo and details (category, name, rating, SKU, price, description,
- * attribute chips, quantity, Add to Cart, wishlist, Eco Certification and Delivery Information), then customer
- * feedback and "You may also like".
+ * Figma product page (C3, C4): breadcrumb, photos and details (category, name, badge, price in dollars paid in USDC,
+ * the store, description, quantity, Add to Cart, Eco Certification and Delivery Information), then "You may also like".
  */
 export function ProductDetailView({ slug }: { slug: string }) {
 	const { data: product, isPending, isError, refetch } = useProduct(slug);
@@ -63,7 +62,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
 			</div>
 
 			<div className="mt-14 lg:mt-[62px]">
-				<ProductReviews slug={product.slug} productName={product.name} />
+				<ProductReviews slug={product.slug} productName={product.title} />
 			</div>
 
 			<div className="mt-12 lg:mt-14">
@@ -100,7 +99,7 @@ function Breadcrumb({ product }: { product: ProductDetail }) {
 				)}
 				<Crumb />
 				<li aria-current="page" className="text-ink">
-					“{product.name}”
+					“{product.title}”
 				</li>
 			</ol>
 		</nav>
@@ -113,28 +112,45 @@ const Crumb = () => (
 	</li>
 );
 
-/** The photo; on mobile the wishlist heart sits on it (Figma), on desktop it's beside Add to Cart. */
+/** The photos: the chosen one large, the others as thumbnails below (in the vendor's order). */
 function ProductImage({ product }: { product: ProductDetail }) {
-	const image = product.images[0];
+	const images = [...product.images].sort((a, b) => a.position - b.position).filter((i) => i.url);
+	const [active, setActive] = useState(0);
+	const current = images[active]?.url ?? product.imageUrl;
 	return (
-		<div className="relative aspect-[518/478] overflow-hidden rounded-md bg-grey-600">
-			{image ? (
-				<Image
-					src={image}
-					alt={product.name}
-					fill
-					priority
-					unoptimized
-					sizes="(min-width: 1024px) 518px, 100vw"
-					className="object-cover"
-				/>
-			) : (
-				<Leaf className="absolute inset-0 m-auto size-12 text-grey-700" aria-hidden />
+		<div>
+			<div className="relative aspect-[518/478] overflow-hidden rounded-md bg-grey-600">
+				{current ? (
+					<Image
+						src={current}
+						alt={product.title}
+						fill
+						priority
+						unoptimized
+						sizes="(min-width: 1024px) 518px, 100vw"
+						className="object-cover"
+					/>
+				) : (
+					<Leaf className="absolute inset-0 m-auto size-12 text-grey-700" aria-hidden />
+				)}
+			</div>
+			{images.length > 1 && (
+				<ul className="mt-3 flex gap-2 overflow-x-auto" aria-label="Product photos">
+					{images.map((img, i) => (
+						<li key={img.id}>
+							<button
+								type="button"
+								onClick={() => setActive(i)}
+								aria-label={`Photo ${i + 1} of ${images.length}`}
+								aria-pressed={i === active}
+								className={`relative block size-16 overflow-hidden rounded-md border-2 ${i === active ? "border-primary-500" : "border-transparent"}`}
+							>
+								<Image src={img.url!} alt="" fill unoptimized sizes="64px" className="object-cover" />
+							</button>
+						</li>
+					))}
+				</ul>
 			)}
-			<WishlistButton
-				product={product}
-				className="absolute top-3 right-3 size-11 bg-primary-200 hover:bg-primary-300 lg:hidden [&_svg]:size-5"
-			/>
 		</div>
 	);
 }
@@ -155,39 +171,46 @@ function ProductSummary({ product }: { product: ProductDetail }) {
 	return (
 		<div className="min-w-0">
 			<h1 className="text-[22px] leading-tight font-semibold text-ink lg:text-[28px]">
-				{product.category && <span className="mr-2 font-normal text-grey-800">{product.category.name}</span>}“{product.name}”
+				{product.category && <span className="mr-2 font-normal text-grey-800">{product.category.name}</span>}“{product.title}”
 			</h1>
 
-			<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-grey-800">
-				<StarRating rating={product.rating} className="size-4 lg:size-[17px]" />
-				<span>
-					{product.review_count} review{product.review_count === 1 ? "" : "s"}
-				</span>
-				<span>
-					<span className="font-medium text-ink">SKU:</span> {product.sku}
-				</span>
+			<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-grey-800">
+				{product.badge && (
+					<span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 font-semibold text-primary-500">
+						<BadgeCheck className="size-3.5" aria-hidden />
+						{BADGE_LABEL[product.badge]}
+					</span>
+				)}
+				{product.rating.count > 0 && (
+					<a href="#reviews-title" className="inline-flex items-center gap-1.5 hover:text-primary-500">
+						<StarRating rating={product.rating.average ?? 0} className="size-4" />
+						{product.rating.count} review{product.rating.count === 1 ? "" : "s"}
+					</a>
+				)}
+				<Link
+					href={shopRoutes.STORE(product.vendor.slug)}
+					className="inline-flex items-center gap-1 hover:text-primary-500 hover:underline"
+				>
+					<Store className="size-3.5" aria-hidden />
+					Sold by <span className="font-medium text-ink">{product.vendor.businessName}</span>
+				</Link>
 			</div>
 
-			<p className="mt-3 flex items-baseline gap-2">
-				<span className="text-lg font-semibold text-primary-500">{formatPrice(product.price)}</span>
-				{product.compare_at_price !== null && product.compare_at_price > product.price && (
-					<s className="text-sm text-grey-800">{formatPrice(product.compare_at_price)}</s>
-				)}
+			<p className="mt-3 flex flex-wrap items-baseline gap-2">
+				<span className="text-lg font-semibold text-primary-500">{price(product.price)}</span>
+				{product.originalPrice && <s className="text-sm text-grey-800">{price(product.originalPrice)}</s>}
+				{product.discountPercent ? (
+					<span className="rounded-full bg-error-50 px-2 py-0.5 text-xs font-medium text-error-500">
+						−{product.discountPercent}%
+					</span>
+				) : null}
+				<span className="text-xs text-grey-800">paid in USDC on Stellar</span>
 			</p>
 
 			<hr className="mt-3 border-grey-600" />
 
-			<p className="mt-5 text-[13px] leading-relaxed text-ink">{product.description}</p>
-
-			{product.tags.length > 0 && (
-				<ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Product qualities">
-					{product.tags.map((tag) => (
-						<li key={tag} className="flex h-7 items-center rounded-md border border-primary-500 px-3 text-xs text-primary-500">
-							{tag}
-						</li>
-					))}
-				</ul>
-			)}
+			<p className="mt-5 text-[13px] leading-relaxed whitespace-pre-line text-ink">{product.description}</p>
+			{!soldOut && product.stock <= 5 && <p className="mt-2 text-xs font-medium text-warning-700">Only {product.stock} left</p>}
 
 			<hr className="mt-3 border-grey-600" />
 
@@ -226,10 +249,7 @@ function ProductSummary({ product }: { product: ProductDetail }) {
 					{soldOut ? "Sold out" : "Add to Cart"}
 				</Button>
 
-				<WishlistButton
-					product={product}
-					className="hidden size-[50px] shrink-0 bg-primary-200 hover:bg-primary-300 lg:grid [&_svg]:size-5"
-				/>
+				<WishlistButton product={product} className="size-[50px] shrink-0 bg-primary-200 hover:bg-primary-300 [&_svg]:size-5" />
 			</div>
 
 			<hr className="mt-4 border-grey-600" />

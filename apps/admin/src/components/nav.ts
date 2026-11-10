@@ -1,4 +1,20 @@
-import { BarChart3, Gift, Headphones, House, Package, Settings, ShoppingBag, Store, Users, type LucideIcon } from "lucide-react";
+import {
+	ArrowLeftRight,
+	ChartColumn,
+	LifeBuoy,
+	Mail,
+	Megaphone,
+	Star,
+	House,
+	Package,
+	ScrollText,
+	Settings,
+	ShieldCheck,
+	ShoppingBag,
+	Store,
+	Users,
+	type LucideIcon,
+} from "lucide-react";
 import { consoleRoutes } from "@/lib/routes";
 
 export interface NavItem {
@@ -7,21 +23,24 @@ export interface NavItem {
 	icon: LucideIcon;
 }
 
-/** The sidebar's sections, in Figma order. */
+/** The sidebar: the Figma sections the API backs, plus payments, analytics, support, reviews, outreach, audit log and admin team. */
 export const MAIN_NAV: NavItem[] = [
 	{ href: consoleRoutes.OVERVIEW, label: "Overview", icon: House },
+	{ href: consoleRoutes.VENDORS, label: "Vendors", icon: Store },
 	{ href: consoleRoutes.PRODUCTS, label: "Products", icon: Package },
 	{ href: consoleRoutes.ORDERS, label: "Orders", icon: ShoppingBag },
-	{ href: consoleRoutes.CUSTOMERS, label: "Customers", icon: Users },
-	{ href: consoleRoutes.VENDORS, label: "Vendors", icon: Store },
-	{ href: consoleRoutes.ANALYTICS, label: "Analytics", icon: BarChart3 },
-	{ href: consoleRoutes.CAMPAIGNS, label: "Campaigns", icon: Gift },
+	{ href: consoleRoutes.PAYMENTS, label: "Payments", icon: ArrowLeftRight },
+	{ href: consoleRoutes.USERS, label: "Users", icon: Users },
+	{ href: consoleRoutes.ANALYTICS, label: "Analytics", icon: ChartColumn },
+	{ href: consoleRoutes.SUPPORT, label: "Support", icon: LifeBuoy },
+	{ href: consoleRoutes.REVIEWS, label: "Reviews", icon: Star },
+	{ href: consoleRoutes.ANNOUNCEMENTS, label: "Announcements", icon: Megaphone },
+	{ href: consoleRoutes.NEWSLETTER, label: "Newsletter", icon: Mail },
+	{ href: consoleRoutes.AUDIT, label: "Audit log", icon: ScrollText },
+	{ href: consoleRoutes.TEAM, label: "Admin team", icon: ShieldCheck },
 ];
 
-export const FOOTER_NAV: NavItem[] = [
-	{ href: consoleRoutes.SETTINGS, label: "Settings", icon: Settings },
-	{ href: consoleRoutes.HELP, label: "Help", icon: Headphones },
-];
+export const FOOTER_NAV: NavItem[] = [{ href: consoleRoutes.SETTINGS, label: "Settings", icon: Settings }];
 
 /** Vendors also owns its sub-pages, including eco-verification. */
 export const isActive = (pathname: string, href: string) =>

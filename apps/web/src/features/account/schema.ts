@@ -1,10 +1,15 @@
 import { z } from "zod";
 
-/** Figma Settings "Personal info". */
+/** Figma Settings "Personal info": the API keeps one name and an optional phone. Email can't be changed. */
 export const PersonalInfoSchema = z.object({
-	first_name: z.string().trim().nonempty("Enter your first name").max(50, "Too long"),
-	last_name: z.string().trim().nonempty("Enter your last name").max(50, "Too long"),
-	email: z.string().trim().nonempty("Enter your email address").pipe(z.email("Enter a valid email address")),
+	name: z.string().trim().nonempty("Enter your name").max(100, "Too long"),
+	phone: z
+		.string()
+		.trim()
+		.refine(
+			(v) => v === "" || /^(?:\+?234|0)[789][01]\d{8}$/.test(v.replace(/[\s-]/g, "")),
+			"Enter a valid Nigerian mobile number",
+		),
 });
 export type PersonalInfoValues = z.infer<typeof PersonalInfoSchema>;
 
@@ -30,6 +35,6 @@ export const ChangePasswordSchema = z
 	});
 export type ChangePasswordValues = z.infer<typeof ChangePasswordSchema>;
 
-/** Figma "SVG, PNG, JPG or GIF". */
-export const PHOTO_TYPES = ["image/svg+xml", "image/png", "image/jpeg", "image/gif"];
+/** Profile photos: PNG, JPG or WebP. */
+export const PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;

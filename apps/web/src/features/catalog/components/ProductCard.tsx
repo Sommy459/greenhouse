@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Leaf } from "lucide-react";
-import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
-import type { Product } from "@/features/catalog/types";
+import { BadgeCheck, Leaf } from "lucide-react";
+import { BADGE_LABEL, type Product } from "@/features/catalog/types";
+import { price } from "@/lib/format";
 import { shopRoutes } from "@/lib/routes";
-import { formatPrice } from "@/lib/site";
+import { WishlistButton } from "@/features/wishlist/components/WishlistButton";
 
 /**
- * Figma product card: portrait photo with the wishlist heart, then name and naira price. Width comes from the caller
- * (`className`), so rows and grids decide how many fit. `imageClassName` sets the photo's shape (default 7:10 portrait).
+ * Figma product card: portrait photo, then name and price. The badge ("Certified" or "Fysi Reviewed", from admin
+ * decisions only) sits on the photo; sold-out products say so. Width comes from the caller (`className`).
  */
 export function ProductCard({
 	product,
@@ -21,17 +21,15 @@ export function ProductCard({
 	imageClassName?: string;
 	sizes?: string;
 }) {
-	const image = product.images[0];
-
 	return (
 		<article className={`relative shrink-0 snap-start ${className}`}>
 			<Link href={shopRoutes.PRODUCT(product.slug)} className="group block">
 				<div className={`hover-lift relative overflow-hidden rounded-md bg-grey-600 ${imageClassName}`}>
-					{image ? (
-						// Product photos come from the API's image host; `unoptimized` until it is added to next.config images.remotePatterns.
+					{product.imageUrl ? (
+						// Photos come from the API's file host; `unoptimized` until it is added to next.config images.remotePatterns.
 						<Image
-							src={image}
-							alt={product.name}
+							src={product.imageUrl}
+							alt={product.title}
 							fill
 							unoptimized
 							sizes={sizes}
@@ -40,9 +38,24 @@ export function ProductCard({
 					) : (
 						<Leaf className="absolute inset-0 m-auto size-10 text-grey-700" aria-hidden />
 					)}
+					{product.badge && (
+						<span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-primary-500 shadow-sm">
+							<BadgeCheck className="size-3" aria-hidden />
+							{BADGE_LABEL[product.badge]}
+						</span>
+					)}
+					{!product.inStock && (
+						<span className="absolute right-2.5 bottom-2.5 rounded-full bg-ink/80 px-2 py-0.5 text-[10px] font-medium text-white">
+							Sold out
+						</span>
+					)}
 				</div>
-				<p className="mt-2 line-clamp-1 text-xs text-ink">{product.name}</p>
-				<p className="text-xs font-semibold text-ink">{formatPrice(product.price)}</p>
+				<p className="mt-2 line-clamp-1 text-xs text-ink">{product.title}</p>
+				<p className="flex items-baseline gap-1.5 text-xs font-semibold text-ink">
+					{price(product.price)}
+					{product.originalPrice && <s className="font-normal text-grey-800">{price(product.originalPrice)}</s>}
+					{product.discountPercent ? <span className="font-medium text-error-500">−{product.discountPercent}%</span> : null}
+				</p>
 			</Link>
 			<WishlistButton product={product} className="absolute top-3 right-3" />
 		</article>

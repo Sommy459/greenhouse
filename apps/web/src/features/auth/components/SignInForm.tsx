@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FcGoogle } from "react-icons/fc";
 import { Button } from "@repo/ui/button";
-import { Checkbox } from "@repo/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/form";
 import { Input } from "@repo/ui/input";
 import { PasswordInput } from "@/features/auth/components/PasswordInput";
@@ -14,20 +12,17 @@ import { useSignIn } from "@/features/auth/hooks";
 import { SignInSchema, type SignInValues } from "@/features/auth/schema";
 import { AUTH_FIELD, AUTH_LABEL, AUTH_SUBMIT } from "@/features/auth/styles";
 import { authRoutes } from "@/lib/routes";
-import { useToast } from "@/lib/use-toast";
 
-/** Figma "Welcome back": email and password, remember for 30 days, forgot password, Google, and a link to sign up (C1). */
+/** Figma "Welcome back": email and password, forgot password, and a link to sign up (C1). */
 export function SignInForm() {
-	const toast = useToast();
 	const signIn = useSignIn();
 	const next = useSearchParams().get("next");
 	const form = useForm<SignInValues>({
 		resolver: zodResolver(SignInSchema),
-		defaultValues: { email: "", password: "", remember_me: false },
+		defaultValues: { email: "", password: "" },
 	});
 
-	const onSubmit = ({ email, password, remember_me }: SignInValues) =>
-		signIn.mutate({ email: email.trim().toLowerCase(), password, remember_me });
+	const onSubmit = ({ email, password }: SignInValues) => signIn.mutate({ email: email.trim().toLowerCase(), password });
 
 	return (
 		<div>
@@ -63,23 +58,7 @@ export function SignInForm() {
 						)}
 					/>
 
-					<div className="mt-2.5 flex items-center justify-between gap-4 lg:mt-2">
-						<FormField
-							control={form.control}
-							name="remember_me"
-							render={({ field }) => (
-								<FormItem className="flex items-center gap-2">
-									<FormControl>
-										<Checkbox
-											checked={field.value}
-											onCheckedChange={(checked) => field.onChange(checked === true)}
-											className="size-[18px] rounded-[4px] border-grey-700 bg-white shadow-none"
-										/>
-									</FormControl>
-									<FormLabel className="text-sm font-normal text-ink lg:text-xs">Remember for 30 days</FormLabel>
-								</FormItem>
-							)}
-						/>
+					<div className="mt-2.5 flex items-center justify-end gap-4 lg:mt-2">
 						<Link href={authRoutes.FORGOT_PASSWORD} className="text-sm text-primary-500 hover:underline lg:text-xs">
 							Forgot password
 						</Link>
@@ -90,16 +69,6 @@ export function SignInForm() {
 					</Button>
 				</form>
 			</Form>
-
-			<Button
-				type="button"
-				variant="outline"
-				onClick={() => toast.info("Google sign-in isn't connected yet.")}
-				className="mt-6 h-11 w-full gap-3 rounded-lg border-grey-600 bg-white text-lg font-medium text-ink/80 hover:bg-grey-500 lg:mt-6 lg:text-base"
-			>
-				<FcGoogle className="size-6" aria-hidden />
-				Sign in with Google
-			</Button>
 
 			<p className="mt-10 text-center text-lg text-ink lg:mt-10 lg:text-base">
 				Don&apos;t have an account?{" "}

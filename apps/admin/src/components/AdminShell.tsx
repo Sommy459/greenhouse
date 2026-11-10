@@ -83,7 +83,7 @@ interface SidebarProps {
 function Sidebar({ pathname, collapsed = false, onToggle, toggleLabel, onNavigate }: SidebarProps) {
 	const user = useSession((s) => s.user);
 	const signOut = useSignOut();
-	const name = user ? `${user.first_name} ${user.last_name}`.trim() : "";
+	const name = user?.name ?? "";
 
 	return (
 		<div className="hide-scroll flex h-full flex-col overflow-y-auto bg-primary-500 px-2 pt-6 pb-6 text-white">
@@ -127,7 +127,7 @@ function Sidebar({ pathname, collapsed = false, onToggle, toggleLabel, onNavigat
 			</nav>
 
 			<div className={clsx("mt-8 flex items-center gap-3", collapsed ? "flex-col" : "pr-2 pl-3")}>
-				<UserAvatar name={name} src={user?.avatar_url} online className="size-10" />
+				<UserAvatar name={name} src={user?.avatarUrl} online className="size-10" />
 				{!collapsed && (
 					<div className="min-w-0 flex-1 text-sm">
 						<p className="truncate font-medium">{name}</p>

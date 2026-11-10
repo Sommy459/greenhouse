@@ -1,34 +1,22 @@
-/** `data` of GET /admin/dashboard (placeholder shape until matched to the API). Money is whole naira. */
+import type { Money } from "@/lib/format";
+
+/** `data` of GET /admin/dashboard (PRD A4): activity per day or week, and the work queues. */
 export interface Dashboard {
-	totals: {
-		revenue: number;
-		/** Percentage change on the previous period, e.g. 10 for +10%. */
-		revenue_change: number;
-		new_clients: number;
-		visited_users: number;
-		vendors: number;
-		orders: number;
+	/** Oldest first. `period` is the day or week start (ISO date). */
+	series: {
+		period: string;
+		newVendors: number;
+		newCustomers: number;
+		paidOrders: number;
+		volume: Money;
+		failedPayments: number;
+	}[];
+	queues: {
+		vendorsPending: number;
+		paymentsToRefund: number;
+		disputes: number;
+		transfersFailed: number;
 	};
-	/** This quarter's revenue against target. */
-	sales_progress: {
-		target: number;
-		revenue: number;
-		today: number;
-		yesterday: number;
-		/** Percentage change on last quarter. */
-		change: number;
-	};
-	/** Orders per month, January first. */
-	sales_by_month: { month: string; sales: number }[];
-	best_sellers: BestSeller[];
-	/** Shares of requests, 0–100. */
-	website_health: { speed: number; error: number };
 }
 
-export interface BestSeller {
-	id: string;
-	name: string;
-	sold: number;
-	price: number;
-	profit: number;
-}
+export type DashboardPeriod = "day" | "week";

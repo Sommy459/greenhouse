@@ -2,84 +2,112 @@
 
 export const authRoutes = {
 	SIGN_IN: "/sign-in",
+	/** Turn on two-factor sign-in (required for admins before anything else works). */
+	TWO_FACTOR: "/two-factor",
 };
 
 export const consoleRoutes = {
 	OVERVIEW: "/",
-	PRODUCTS: "/products",
-	NEW_PRODUCT: "/products/new",
-	PRODUCT: (productId: string) => `/products/${productId}`,
-	ORDERS: "/orders",
-	/** The Order Details dialog, over the order list (Figma). */
-	ORDER: (orderId: string) => `/orders?order=${encodeURIComponent(orderId)}`,
-	/** The same dialog, scrolled to Order Tracking. */
-	TRACK_ORDER: (orderId: string) => `/orders?order=${encodeURIComponent(orderId)}&section=tracking`,
-	CUSTOMERS: "/customers",
-	CUSTOMER: (customerId: string) => `/customers/${customerId}`,
+	/** Vendor verification queue and every vendor (PRD A1–A2). */
 	VENDORS: "/vendors",
 	VENDOR: (vendorId: string) => `/vendors/${vendorId}`,
-	/** Old link to the verification queue; redirects to VENDOR_QUEUE. */
-	VERIFICATION: "/verification",
-	/** The verification queue (PRD A1): the vendor list filtered to Pending. */
+	/** The queue: the vendor list filtered to Pending. */
 	VENDOR_QUEUE: "/vendors?status=pending",
+	/** Old link to the queue; redirects to VENDOR_QUEUE. */
+	VERIFICATION: "/verification",
+	/** Catalogue moderation and categories (PRD A5). */
+	PRODUCTS: "/products",
+	CATEGORIES: "/products?tab=categories",
+	/** Vendor orders, escrow and disputes. */
+	ORDERS: "/orders",
+	/** Transaction monitor (PRD A4): incoming payments, and payouts, refunds and withdrawals. */
+	PAYMENTS: "/payments",
+	/** Every account (customers, vendors, admins). */
+	USERS: "/customers",
+	USER: (userId: string) => `/customers/${userId}`,
+	/** The append-only audit log (PRD A3). */
+	AUDIT: "/audit",
+	/** Admin accounts; super admins add admins (PRD A7). */
+	TEAM: "/team",
+	/** Sales, commission and growth over a range. */
 	ANALYTICS: "/analytics",
-	CAMPAIGNS: "/campaigns",
+	/** Help desk: tickets from customers and vendors. */
+	SUPPORT: "/support",
+	TICKET: (id: string) => `/support/${id}`,
+	/** Review moderation. */
+	REVIEWS: "/reviews",
+	/** In-app announcements to customers, vendors or staff. */
+	ANNOUNCEMENTS: "/announcements",
+	/** Newsletter subscribers and email campaigns. */
+	NEWSLETTER: "/newsletter",
+	CAMPAIGNS: "/newsletter?tab=campaigns",
+	NEW_CAMPAIGN: "/newsletter/campaigns/new",
+	CAMPAIGN: (id: string) => `/newsletter/campaigns/${id}`,
 	SETTINGS: "/settings",
-	/** E-mail notification switches (Figma "Notification"); reached from the bell and the account menu. */
-	NOTIFICATION_SETTINGS: "/settings/notifications",
-	HELP: "/help",
 };
 
-/** API paths (relative to /api/v1). */
+/** Fysi API paths, relative to /api/v1 (https://fysi-backend-production.up.railway.app/docs). */
 export const backendRoutes = {
+	// Auth
 	SIGN_IN: "/auth/login",
-	STATS: "/admin/stats",
-	/** The Overview dashboard: totals, sales by month, sales progress, best sellers, site health. */
+	LOGIN_2FA: "/auth/login/2fa",
+	SETUP_2FA: "/auth/2fa/setup",
+	ENABLE_2FA: "/auth/2fa/enable",
+	REFRESH: "/auth/refresh",
+	LOGOUT: "/auth/logout",
+	CHANGE_PASSWORD: "/auth/change-password",
+	VERIFY_EMAIL: "/auth/verify-email",
+	ME: "/auth/me",
+	AVATAR: "/auth/me/avatar",
+	// Dashboard and money
 	DASHBOARD: "/admin/dashboard",
-	PRODUCTS: "/admin/products",
-	/** DELETE with `{ reason }`: remove a listing for good (PRD A5). */
-	PRODUCT: (productId: string) => `/admin/products/${productId}`,
-	/** POST `{ visibility: "visible" | "hidden", reason? }`: hide from the store or show again. */
-	PRODUCT_VISIBILITY: (productId: string) => `/admin/products/${productId}/visibility`,
-	CATEGORIES: "/admin/categories",
-	ORDERS: "/admin/orders",
-	ORDER: (orderId: string) => `/admin/orders/${orderId}`,
-	/** The same filters as ORDERS (or `ids`), answered as a CSV file. */
-	ORDERS_EXPORT: "/admin/orders/export",
-	CUSTOMERS: "/admin/customers",
-	CUSTOMER: (customerId: string) => `/admin/customers/${customerId}`,
-	/** Blacklist (blocked) or restore (active). */
-	CUSTOMER_STATUS: (customerId: string) => `/admin/customers/${customerId}/status`,
-	/** The same filters as CUSTOMERS (or `ids`), answered as a CSV file. */
-	CUSTOMERS_EXPORT: "/admin/customers/export",
+	PAYMENTS: "/admin/payments",
+	REFUND_PAYMENT: (id: string) => `/admin/payments/${id}/refund`,
+	VENDOR_ORDERS: "/admin/vendor-orders",
+	RELEASE_ESCROW: (id: string) => `/admin/vendor-orders/${id}/release`,
+	REFUND_VENDOR_ORDER: (id: string) => `/admin/vendor-orders/${id}/refund`,
+	/** The tabs say "payouts"; the API's path takes the singular (`payout`, `refund`, `withdrawal`). */
+	TRANSFERS: (kind: "payouts" | "refunds" | "withdrawals") => `/admin/transfers/${kind.slice(0, -1)}`,
+	RETRY_TRANSFER: (kind: "payouts" | "refunds" | "withdrawals", id: string) =>
+		`/admin/transfers/${kind.slice(0, -1)}/${id}/retry`,
+	// Vendors
 	VENDORS: "/admin/vendors",
-	VENDOR: (vendorId: string) => `/admin/vendors/${vendorId}`,
-	/** Approve, reject (with `reason`), suspend or reactivate. */
-	VENDOR_STATUS: (vendorId: string) => `/admin/vendors/${vendorId}/status`,
-	/** The same filters as VENDORS (or `ids`), answered as a CSV file. */
-	VENDORS_EXPORT: "/admin/vendors/export",
-	/** Overall Sales and Sales Report: `period` = daily | weekly | monthly. */
+	VENDOR: (id: string) => `/admin/vendors/${id}`,
+	APPROVE_VENDOR: (id: string) => `/admin/vendors/${id}/approve`,
+	REJECT_VENDOR: (id: string) => `/admin/vendors/${id}/reject`,
+	SUSPEND_VENDOR: (id: string) => `/admin/vendors/${id}/suspend`,
+	REINSTATE_VENDOR: (id: string) => `/admin/vendors/${id}/reinstate`,
+	// Catalogue
+	PRODUCTS: "/admin/products",
+	HIDE_PRODUCT: (id: string) => `/admin/products/${id}/hide`,
+	UNHIDE_PRODUCT: (id: string) => `/admin/products/${id}/unhide`,
+	REMOVE_PRODUCT: (id: string) => `/admin/products/${id}/remove`,
+	CATEGORIES: "/admin/categories",
+	CATEGORY: (id: string) => `/admin/categories/${id}`,
+	// Accounts and audit
+	USERS: "/admin/users",
+	USER: (id: string) => `/admin/users/${id}`,
+	SUSPENSION: (id: string) => `/admin/users/${id}/suspension`,
+	RESET_2FA: (id: string) => `/admin/users/${id}/2fa/reset`,
+	AUDIT_LOGS: "/audit-logs",
+	// Products for a vendor
+	PRODUCT: (id: string) => `/admin/products/${id}`,
+	PRODUCT_IMAGES: (id: string) => `/admin/products/${id}/images`,
+	PRODUCT_IMAGE: (id: string, imageId: string) => `/admin/products/${id}/images/${imageId}`,
+	// Insight, outreach and support
 	ANALYTICS: "/admin/analytics",
-	ANALYTICS_BEST_SELLERS: "/admin/analytics/best-sellers",
-	/** The same `period`, answered as a CSV file. */
-	ANALYTICS_EXPORT: "/admin/analytics/export",
-	/** Campaign page: impressions per period (`period`, `tab`, `search`, `status`). */
-	CAMPAIGN_STATS: "/admin/campaigns/stats",
-	/** `range` = today | week | month. */
-	CAMPAIGN_TRAFFIC: "/admin/campaigns/traffic",
-	CAMPAIGN_ADS: "/admin/campaigns/ads",
-	/** The same filters as CAMPAIGN_ADS, answered as a CSV file. */
-	CAMPAIGNS_EXPORT: "/admin/campaigns/export",
-	/** The signed-in admin's own details (Settings): GET, PUT. */
-	PROFILE: "/admin/profile",
-	/** POST (multipart `avatar`) to replace, DELETE to remove. */
-	PROFILE_AVATAR: "/admin/profile/avatar",
-	/** GET, PUT `{ vendor_onboarding, customer_onboarding, comments }`. */
-	NOTIFICATION_PREFS: "/admin/profile/notifications",
-	/** Customer problem reports (Help); the storefront's Report a Problem creates them. */
-	SUPPORT_TICKETS: "/admin/support/tickets",
-	/** The same list, answered as a CSV file. */
-	SUPPORT_TICKETS_EXPORT: "/admin/support/tickets/export",
-	CERTIFICATIONS: "/admin/certifications",
-	CERTIFICATION_STATUS: (certificationId: string) => `/admin/certifications/${certificationId}/status`,
+	EXPORT: (what: ExportKind) => `/admin/exports/${what}.csv`,
+	NOTIFICATIONS: "/admin/notifications",
+	REVIEWS: "/admin/reviews",
+	HIDE_REVIEW: (id: string) => `/admin/reviews/${id}/hide`,
+	UNHIDE_REVIEW: (id: string) => `/admin/reviews/${id}/unhide`,
+	SUBSCRIBERS: "/admin/newsletter/subscribers",
+	CAMPAIGNS: "/admin/campaigns",
+	CAMPAIGN: (id: string) => `/admin/campaigns/${id}`,
+	CAMPAIGN_ACTION: (id: string, action: "test" | "send" | "cancel") => `/admin/campaigns/${id}/${action}`,
+	TICKETS: "/admin/tickets",
+	TICKET: (id: string) => `/admin/tickets/${id}`,
+	TICKET_MESSAGES: (id: string) => `/admin/tickets/${id}/messages`,
 };
+
+export type ExportKind = "users" | "customers" | "vendors" | "orders" | "payments" | "products" | "newsletter" | "tickets";

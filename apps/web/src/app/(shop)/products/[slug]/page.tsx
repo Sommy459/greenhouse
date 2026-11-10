@@ -3,7 +3,11 @@ import { ProductDetailView } from "@/features/catalog/components/product/Product
 import { Newsletter } from "@/features/home/components/Newsletter";
 
 /** "bamboo-desk-lamp" → "Bamboo Desk Lamp" (the product itself loads in the browser from the API). */
-const titleFromSlug = (slug: string) => slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+const titleFromSlug = (slug: string) =>
+	slug
+		.split("-")
+		.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+		.join(" ");
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
 	return { title: titleFromSlug((await params).slug) };
