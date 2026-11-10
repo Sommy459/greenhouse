@@ -1,7 +1,8 @@
 import { Logo } from "@/components/Logo";
+import { asset } from "@/lib/site";
 
 /** Left-panel photo (Figma vendor onboarding). Not in the repo yet: see public/images/onboarding/README.md. */
-const ONBOARDING_IMAGE = "/images/onboarding/vendor.jpg";
+const ONBOARDING_IMAGE = asset("/images/onboarding/vendor.jpg");
 
 /**
  * Figma vendor onboarding layout: on desktop a photo with "Go Green With Us" fills the left ~44% and stays fixed while

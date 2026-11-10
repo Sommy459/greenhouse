@@ -28,7 +28,13 @@ export function StoreFooter() {
 				</div>
 				<div>
 					<Menu className="mb-3 size-4" aria-label="More" />
-					<LinkList links={[...FOOTER_CONTACT.slice(0, 1), ...SOCIALS.map(({ label, href }) => ({ label, href })), ...FOOTER_CONTACT.slice(1)]} />
+					<LinkList
+						links={[
+							...FOOTER_CONTACT.slice(0, 1),
+							...SOCIALS.map(({ label, href }) => ({ label, href })),
+							...FOOTER_CONTACT.slice(1),
+						]}
+					/>
 				</div>
 				<FooterColumn title="Catalogue" links={CATEGORY_LINKS} />
 				<FooterColumn title="Account" links={FOOTER_ACCOUNT} />
@@ -72,7 +78,12 @@ export function StoreFooter() {
 				</a>
 				<div className="mt-5 flex gap-3">
 					{SOCIALS.map(({ label, href, icon: Icon }) => (
-						<a key={label} href={href} aria-label={label} className="grid size-7 place-items-center rounded-full bg-white text-primary-500">
+						<a
+							key={label}
+							href={href}
+							aria-label={label}
+							className="grid size-7 place-items-center rounded-full bg-white text-primary-500"
+						>
 							<Icon className="size-3.5" />
 						</a>
 					))}

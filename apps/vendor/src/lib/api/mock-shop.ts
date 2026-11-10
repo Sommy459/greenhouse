@@ -22,6 +22,7 @@ import {
 	type VendorOrder,
 } from "@/features/orders/types";
 import { stockState, type ProductStats, type ShopCertification, type VendorProduct } from "@/features/products/types";
+import { asset } from "@/lib/site";
 
 const DAY = 86400000;
 
@@ -41,7 +42,7 @@ const CATALOGUE: [string, string][] = [
 	["Steel Water Bottle", "steel-bottle.jpg"],
 ];
 const NAMES = CATALOGUE.map(([name]) => name);
-const photo = (i: number) => `/images/products/${CATALOGUE[i % CATALOGUE.length]![1]}`;
+const photo = (i: number) => asset(`/images/products/${CATALOGUE[i % CATALOGUE.length]![1]}`);
 const CATEGORIES = ["Health & Care", "Household items", "Clothing", "Office supplies", "Kitchen supplies"];
 
 /** 172 listings, newest first (the Figma count). Every 9th is hidden by you, every 23rd by Fysi, every 7th sold out. */

@@ -10,8 +10,8 @@ Turborepo + pnpm monorepo:
 | Path | What | Dev URL |
 |---|---|---|
 | `apps/web` | Storefront: home, catalogue, search, product, cart, checkout, customer account and wallet | http://localhost:3000 |
-| `apps/vendor` | Seller centre: onboarding and verification, listings, orders, wallet and withdrawals | http://localhost:3001 |
-| `apps/admin` | Admin console: vendor verification, dashboard, activity log, transactions, moderation, users | http://localhost:3002 |
+| `apps/vendor` | Seller centre: onboarding and verification, listings, orders, wallet and withdrawals | http://localhost:3001/vendor |
+| `apps/admin` | Admin console: vendor verification, dashboard, activity log, transactions, moderation, users | http://localhost:3002/admin |
 | `packages/ui` | `@repo/ui`: design tokens, shadcn components, motion | — |
 | `packages/eslint-config`, `packages/typescript-config` | Shared configs | — |
 

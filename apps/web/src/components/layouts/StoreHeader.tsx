@@ -110,12 +110,24 @@ function CatalogueMenu() {
 				sideOffset={14}
 				className="relative w-[478px] overflow-hidden rounded-[7px] border border-grey-600 bg-white px-[44px] py-6 shadow-lg"
 			>
-				<span className="pointer-events-none absolute -top-1 -right-1 h-[50px] w-[42px] bg-contain bg-right-top bg-no-repeat" style={{ backgroundImage: `url("${MENU_CORNER_TOP}")` }} aria-hidden />
-				<span className="pointer-events-none absolute -bottom-1 -left-1 h-[55px] w-[48px] bg-contain bg-left-bottom bg-no-repeat" style={{ backgroundImage: `url("${MENU_CORNER_BOTTOM}")` }} aria-hidden />
+				<span
+					className="pointer-events-none absolute -top-1 -right-1 h-[50px] w-[42px] bg-contain bg-right-top bg-no-repeat"
+					style={{ backgroundImage: `url("${MENU_CORNER_TOP}")` }}
+					aria-hidden
+				/>
+				<span
+					className="pointer-events-none absolute -bottom-1 -left-1 h-[55px] w-[48px] bg-contain bg-left-bottom bg-no-repeat"
+					style={{ backgroundImage: `url("${MENU_CORNER_BOTTOM}")` }}
+					aria-hidden
+				/>
 
 				<div className="relative grid grid-cols-[194px_1fr] gap-y-[11px]">
 					{CATEGORY_LINKS.map(({ href, label, icon: Icon }) => (
-						<DropdownMenuItem key={href} asChild className="cursor-pointer gap-4 rounded-md px-0 py-2 text-[15px] text-ink focus:bg-transparent focus:text-primary-500 [&_svg]:size-5">
+						<DropdownMenuItem
+							key={href}
+							asChild
+							className="cursor-pointer gap-4 rounded-md px-0 py-2 text-[15px] text-ink focus:bg-transparent focus:text-primary-500 [&_svg]:size-5"
+						>
 							<Link href={href}>
 								<Icon className="shrink-0 text-primary-500" strokeWidth={1.75} aria-hidden />
 								{label}
@@ -135,7 +147,10 @@ function CatalogueMenu() {
 function HeaderMenu() {
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger aria-label="Menu" className="rounded-md p-1 text-ink outline-none hover:bg-grey-600 data-[state=open]:bg-grey-600">
+			<DropdownMenuTrigger
+				aria-label="Menu"
+				className="rounded-md p-1 text-ink outline-none hover:bg-grey-600 data-[state=open]:bg-grey-600"
+			>
 				<Menu className="size-5" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -149,7 +164,11 @@ function HeaderMenu() {
 					aria-hidden
 				/>
 				{HEADER_MENU_LINKS.map(({ label, href, external }) => (
-					<DropdownMenuItem key={label} asChild className="relative cursor-pointer rounded-md px-0 py-[5px] text-[15px] text-ink focus:bg-transparent focus:text-primary-500">
+					<DropdownMenuItem
+						key={label}
+						asChild
+						className="relative cursor-pointer rounded-md px-0 py-[5px] text-[15px] text-ink focus:bg-transparent focus:text-primary-500"
+					>
 						{external ? (
 							<a href={href} target="_blank" rel="noreferrer">
 								{label}
@@ -204,7 +223,10 @@ function CartLink({ count, withLabel = false, className = "" }: { count: number;
 				<ShoppingCart className="size-[22px] lg:size-[18px]" aria-hidden />
 				{count > 0 && (
 					// Keyed on the count, so the badge pops each time something is added or removed.
-					<span key={count} className="animate-pop absolute -top-2 -right-2 grid min-w-4 place-items-center rounded-full bg-error-500 px-1 text-[10px] leading-4 font-bold text-white">
+					<span
+						key={count}
+						className="animate-pop absolute -top-2 -right-2 grid min-w-4 place-items-center rounded-full bg-error-500 px-1 text-[10px] leading-4 font-bold text-white"
+					>
 						{count}
 					</span>
 				)}
@@ -217,7 +239,8 @@ function CartLink({ count, withLabel = false, className = "" }: { count: number;
 /** The Catalogue dropdown reads its two columns left to right; the slide-out lists the left column, then the right. */
 const CATEGORIES_BY_COLUMN = [...CATEGORY_LINKS.filter((_, i) => i % 2 === 0), ...CATEGORY_LINKS.filter((_, i) => i % 2 === 1)];
 
-const SHEET_ROW = "flex h-12 items-center gap-3 rounded-md text-[15px] text-white/95 outline-none hover:text-lime-300 focus-visible:ring-2 focus-visible:ring-white/60";
+const SHEET_ROW =
+	"flex h-12 items-center gap-3 rounded-md text-[15px] text-white/95 outline-none hover:text-lime-300 focus-visible:ring-2 focus-visible:ring-white/60";
 
 /**
  * Figma mobile slide-out menu: dark green, white logo and ×. Account links with icons, "Catalogues" with the category
@@ -226,7 +249,9 @@ const SHEET_ROW = "flex h-12 items-center gap-3 rounded-md text-[15px] text-whit
  */
 function MenuSheet({ signedIn }: { signedIn: boolean }) {
 	const account = [
-		signedIn ? { label: "My Account", href: accountRoutes.DASHBOARD, icon: UserRound } : { label: "Sign In", href: authRoutes.SIGN_IN(), icon: UserRound },
+		signedIn
+			? { label: "My Account", href: accountRoutes.DASHBOARD, icon: UserRound }
+			: { label: "Sign In", href: authRoutes.SIGN_IN(), icon: UserRound },
 		{ label: "Order History", href: accountRoutes.ORDERS, icon: ShoppingBag },
 		{ label: "Inbox", href: accountRoutes.INBOX, icon: Mail },
 		{ label: "Reviews", href: accountRoutes.REVIEWS, icon: Pencil },

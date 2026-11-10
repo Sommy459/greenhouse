@@ -13,7 +13,10 @@ export const FEEDBACK_DIALOG_CLASS = cn(
 
 export function FeedbackDialogClose() {
 	return (
-		<DialogClose aria-label="Close" className="absolute top-5 right-5 grid size-9 place-items-center rounded-md text-ink hover:bg-grey-600 sm:top-12 sm:right-[34px]">
+		<DialogClose
+			aria-label="Close"
+			className="absolute top-5 right-5 grid size-9 place-items-center rounded-md text-ink hover:bg-grey-600 sm:top-12 sm:right-[34px]"
+		>
 			<X className="size-7" strokeWidth={1.5} />
 		</DialogClose>
 	);
@@ -26,10 +29,16 @@ export function FeedbackSent() {
 			<span className="animate-pop text-primary-500">
 				<FysiLogo size="xl" />
 			</span>
-			<DialogTitle className="animate-rise mt-6 text-[32px] leading-tight font-bold text-primary-500 sm:mt-8 sm:text-4xl" style={{ "--i": 2 } as React.CSSProperties}>
+			<DialogTitle
+				className="animate-rise mt-6 text-[32px] leading-tight font-bold text-primary-500 sm:mt-8 sm:text-4xl"
+				style={{ "--i": 2 } as React.CSSProperties}
+			>
 				Thank you!
 			</DialogTitle>
-			<DialogDescription className="animate-rise mt-4 mb-0 text-base text-grey-800 sm:mt-6 sm:text-lg" style={{ "--i": 3 } as React.CSSProperties}>
+			<DialogDescription
+				className="animate-rise mt-4 mb-0 text-base text-grey-800 sm:mt-6 sm:text-lg"
+				style={{ "--i": 3 } as React.CSSProperties}
+			>
 				Your feedback has been sent
 			</DialogDescription>
 		</div>

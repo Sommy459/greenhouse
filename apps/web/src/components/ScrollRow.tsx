@@ -16,9 +16,22 @@ export function useScrollRow() {
 	return { ref, prev: () => scroll(-1), next: () => scroll(1) };
 }
 
-export function ScrollRow({ rowRef, label, children }: { rowRef: React.RefObject<HTMLDivElement | null>; label: string; children: React.ReactNode }) {
+export function ScrollRow({
+	rowRef,
+	label,
+	children,
+}: {
+	rowRef: React.RefObject<HTMLDivElement | null>;
+	label: string;
+	children: React.ReactNode;
+}) {
 	return (
-		<div ref={rowRef} role="region" aria-label={label} className="hide-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth lg:gap-5">
+		<div
+			ref={rowRef}
+			role="region"
+			aria-label={label}
+			className="hide-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth lg:gap-5"
+		>
 			{children}
 		</div>
 	);

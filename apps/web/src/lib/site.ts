@@ -10,16 +10,21 @@ const SITE_KEYWORDS = ["eco-friendly", "sustainable", "marketplace", "Nigeria", 
 const THEME_COLOR = "#003e20";
 
 /**
- * Production hosts are not decided yet. Set NEXT_PUBLIC_SITE_URL (and NEXT_PUBLIC_VENDOR_URL) per environment;
- * on Vercel previews the deployment URL is used, and localhost in dev.
+ * On Vercel the three apps share one domain (root vercel.json): the storefront at the root, the seller centre at
+ * /vendor, the admin console at /admin. NEXT_PUBLIC_SITE_URL is that domain's origin (e.g. https://fysi.ng); previews
+ * use the deployment URL, and localhost in dev.
  */
-const ORIGIN =
-	process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ?? "http://localhost:3000";
+const VERCEL_ORIGIN =
+	(process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL) &&
+	`https://${process.env.NEXT_PUBLIC_VERCEL_URL ?? process.env.VERCEL_URL}`;
+const SHARED_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL || VERCEL_ORIGIN || undefined;
+const ORIGIN = SHARED_ORIGIN || "http://localhost:3000";
 
 const SITE_URL = new URL("/", ORIGIN);
 
-/** The seller centre (`apps/vendor`), for "Sell on Fysi". Link to it with a plain <a>. */
-const VENDOR_URL = process.env.NEXT_PUBLIC_VENDOR_URL ?? "http://localhost:3001";
+/** The seller centre (`apps/vendor`, basePath /vendor), for "Sell on Fysi". Link to it with a plain <a>. */
+const VENDOR_URL =
+	process.env.NEXT_PUBLIC_VENDOR_URL || (SHARED_ORIGIN ? `${SHARED_ORIGIN}/vendor` : "http://localhost:3001/vendor");
 
 /** Shown in the announcement bar. The number is the one in the Figma design: replace with the real support line. */
 const SUPPORT_PHONE = "+09112312345";

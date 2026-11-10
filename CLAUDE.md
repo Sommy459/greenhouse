@@ -13,8 +13,8 @@ Turborepo + pnpm 12 (`packageManager`), Node ≥ 22.
 
 ```
 apps/web/          (:3000) storefront: (shop) pages, /account, /checkout, /auth. Public and indexable.
-apps/vendor/       (:3001) seller centre: /sign-in, /sign-up, /onboarding, /pending, (console) pages
-apps/admin/        (:3002) admin console: /sign-in, (console) pages (admins only)
+apps/vendor/       (:3001/vendor) seller centre: /sign-in, /sign-up, /onboarding, /pending, (console) pages
+apps/admin/        (:3002/admin) admin console: /sign-in, (console) pages (admins only)
 packages/ui/       @repo/ui — design tokens, shadcn components, motion, PagePlaceholder
 packages/eslint-config, packages/typescript-config
 ```
@@ -22,9 +22,13 @@ packages/eslint-config, packages/typescript-config
 `pnpm dev` (all) · `pnpm build` · `pnpm check-types` · `pnpm lint` (UI package: `--max-warnings 0`)
 · `pnpm format` (prettier: tabs, width 130).
 
-Deployment and production hosts are not decided. Each app reads its origin from `NEXT_PUBLIC_SITE_URL` (`src/lib/site.ts`);
-cross-app links use `NEXT_PUBLIC_VENDOR_URL` / `NEXT_PUBLIC_STORE_URL`. When hosts are chosen, add a root `vercel.json`
-as in stellance.
+Deployment: one Vercel project with services (root `vercel.json`): `web` at the domain root, `vendor` under `/vendor`,
+`admin` under `/admin`. Vendor and admin set that prefix as Next `basePath` (`next.config.ts`), locally too, so dev URLs
+are http://localhost:3001/vendor and http://localhost:3002/admin. Links, redirects and `/_next` get it automatically;
+plain paths to `public/` files (incl. next/image `src`) must use `asset()` from `lib/site.ts`, and the API proxy is
+`<basePath>/api/v1`. `NEXT_PUBLIC_SITE_URL` is the shared domain origin (previews use the deployment URL); cross-app
+links (`VENDOR_URL`, `STORE_URL`) derive from it, or `NEXT_PUBLIC_VENDOR_URL` / `NEXT_PUBLIC_STORE_URL` override. The apps
+never call each other server-side (only the external API), so the services have no bindings.
 
 ## Stack
 
