@@ -275,20 +275,8 @@ Customer sign in (Figma "Welcome back", `/auth/sign-in`): `POST /auth/login { em
 the session; `remember_me` asks for a 30-day session. Not wired yet: "Sign in with Google" (shows a toast) and Forgot
 password (placeholder page; screen not designed yet).
 
-**Temporary mock:** with `NEXT_PUBLIC_MOCK_API=1` in `apps/web/.env.local`, `apps/web/src/lib/api/mock.ts` answers in
-the browser: the auth endpoints above (demo account demo@fysi.ng / Password1, code 1234; new accounts in localStorage),
-`GET /categories`, `GET /products` (all filters), `GET /products/:slug`, `GET /products/:slug/reviews`, `POST /checkout/quote` (coupons GREEN250 and FYSI10; shipping ₦1,500, free from ₦50,000), `POST /orders` (card orders count as paid; no provider) (81 sample products across all 8 categories in `mock-catalog.ts`, photos
-in `public/images/products`) and `POST /newsletter`. All other requests still go to the API. Remove `mock.ts`,
-`mock-catalog.ts`, `public/images/products` and the lines in `lib/api/client.ts` when the API is connected.
-
-The vendor app has the same switch (`apps/vendor/.env.local`): `apps/vendor/src/lib/api/mock.ts` answers vendor sign in,
-the sign-up flow (`/auth/email/*` with code 1234, `/auth/signup`), `GET /vendor/me`, `POST /vendor/onboarding` (new
-shops stay pending) and `GET /vendor/products` (empty). Demo vendors: new@fysi.ng / Password1 (no shop, goes to
-onboarding), vendor@fysi.ng / Password1 (approved shop).
-
-The admin app too (`apps/admin/.env.local`): `apps/admin/src/lib/api/mock.ts` answers admin sign in (admin@fysi.ng /
-Password1), the Overview, products (list, categories, Add Product), orders and customers (lists, details, export, delete,
-blacklist).
+**No mocks:** every screen reads the live Fysi API. The browser mocks, the sample catalogue and its photos were removed
+(2026-11-10); `NEXT_PUBLIC_MOCK_API` does nothing any more and can be deleted from Vercel and `.env.local`.
 
 Also assumed by the home page: `POST /newsletter { email }`. Category slugs in `lib/navigation.ts` follow the Figma
 catalogue dropdown and must match the API's.

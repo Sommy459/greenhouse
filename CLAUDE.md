@@ -28,7 +28,11 @@ are http://localhost:3001/vendor and http://localhost:3002/admin. Links, redirec
 plain paths to `public/` files (incl. next/image `src`) must use `asset()` from `lib/site.ts`, and the API proxy is
 `<basePath>/api/v1`. `NEXT_PUBLIC_SITE_URL` is the shared domain origin (previews use the deployment URL); cross-app
 links (`VENDOR_URL`, `STORE_URL`) derive from it, or `NEXT_PUBLIC_VENDOR_URL` / `NEXT_PUBLIC_STORE_URL` override. The apps
-never call each other server-side (only the external API), so the services have no bindings.
+never call each other server-side (only the external API), so the services have no bindings. Production is
+https://greenhouse-v3.vercel.app (`PRODUCTION_ORIGIN` in each `lib/site.ts`). Vercel's `/_next/image` isn't routed to
+these services, so every app sets `images.unoptimized`. Icons and share images are drawn by `lib/share-image.tsx`
+(next/og): web uses the `icon` / `opengraph-image` file conventions; vendor and admin serve them from `app/meta/*`
+routes linked in the root layout, because the file conventions drop the basePath from their tags.
 
 ## Stack
 

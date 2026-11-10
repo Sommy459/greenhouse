@@ -18,15 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 				className="relative hidden h-dvh w-[44%] shrink-0 self-start overflow-hidden bg-primary-300 lg:sticky lg:top-0 lg:block"
 				aria-hidden
 			>
-				<Image
-					src={AUTH_IMAGE}
-					alt=""
-					fill
-					priority
-					quality={90}
-					sizes="44vw"
-					className="animate-zoom object-cover object-center"
-				/>
+				<Image src={AUTH_IMAGE} alt="" fill priority sizes="44vw" className="animate-zoom object-cover object-center" />
 			</div>
 			<div className="flex flex-1 justify-center px-4 pt-24 pb-16 sm:px-8 lg:pt-36">
 				<div className="w-full max-w-[440px]">

@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
 	// so they never overwrite the `.next` a running `pnpm dev` is serving from.
 	distDir: process.env.NEXT_DIST_DIR || ".next",
 	reactCompiler: true,
+	// Vercel's image optimiser (/_next/image) isn't routed to these services (root vercel.json), so it 404s and every
+	// <Image> broke. Serve the files as they are: public/ images are already sized, product photos come from the API.
+	images: { unoptimized: true },
 	transpilePackages: ["@repo/ui"],
 	// Dev only: let a phone on the LAN load dev assets / HMR (mobile web is a first-class target).
 	allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*"],

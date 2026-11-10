@@ -58,9 +58,21 @@ export function StoreHeader() {
 				</nav>
 				<SearchForm className="mx-auto w-full max-w-[420px]" withButton />
 				<nav className="flex items-center gap-6 text-sm text-ink" aria-label="Account">
-					<Link href={signedIn ? accountRoutes.DASHBOARD : authRoutes.SIGN_UP()} className="hover:text-primary-500">
-						{signedIn ? "My Account" : "Sign Up"}
-					</Link>
+					{signedIn ? (
+						<Link href={accountRoutes.DASHBOARD} className="hover:text-primary-500">
+							My Account
+						</Link>
+					) : (
+						<>
+							<Link href={authRoutes.SIGN_IN()} className="flex items-center gap-1.5 hover:text-primary-500">
+								<UserRound className="size-[18px]" aria-hidden />
+								Sign In
+							</Link>
+							<Link href={authRoutes.SIGN_UP()} className="hover:text-primary-500">
+								Sign Up
+							</Link>
+						</>
+					)}
 					<Link href={accountRoutes.WISHLIST} className="flex items-center gap-1.5 hover:text-primary-500">
 						<Heart className="size-[18px]" aria-hidden />
 						Wishlist
@@ -74,7 +86,14 @@ export function StoreHeader() {
 				<div className="flex h-16 items-center gap-3 px-4">
 					<MenuSheet signedIn={signedIn} />
 					<Logo />
-					<CartLink count={ready ? count : 0} className="ml-auto" />
+					<Link
+						href={signedIn ? accountRoutes.DASHBOARD : authRoutes.SIGN_IN()}
+						className="ml-auto flex items-center gap-1.5 rounded-md p-1 text-sm text-ink hover:text-primary-500"
+					>
+						<UserRound className="size-5" aria-hidden />
+						<span className={signedIn ? "sr-only" : undefined}>{signedIn ? "My Account" : "Sign In"}</span>
+					</Link>
+					<CartLink count={ready ? count : 0} />
 				</div>
 				<div className="px-4 pb-4">
 					<SearchForm />
