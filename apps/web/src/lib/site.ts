@@ -39,8 +39,11 @@ const VENDOR_URL =
 /** Shown in the announcement bar. The number is the one in the Figma design: replace with the real support line. */
 const SUPPORT_PHONE = "+09112312345";
 
-/** Footer social links. TODO: real profile URLs. */
-const SOCIAL_LINKS = { facebook: "#", x: "#", instagram: "#" };
+/**
+ * Social profile URLs. Empty until Fysi has them: the footer hides an empty one and the Contact page shows its handle as
+ * plain text, so nothing links to "#". Fill in e.g. "https://instagram.com/fysi".
+ */
+const SOCIAL_LINKS: Record<"facebook" | "x" | "instagram", string> = { facebook: "", x: "", instagram: "" };
 /** Handles shown on the Contact page (Figma). TODO: confirm the real handles. */
 const SOCIAL_HANDLES = { instagram: "@Fysi", facebook: "@Fysi", x: "@Fysi" };
 

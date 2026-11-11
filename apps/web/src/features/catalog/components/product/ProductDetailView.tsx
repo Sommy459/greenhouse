@@ -214,8 +214,8 @@ function ProductSummary({ product }: { product: ProductDetail }) {
 
 			<hr className="mt-3 border-grey-600" />
 
-			<div className="mt-4 flex items-center gap-3">
-				<div className="flex h-[46px] w-[140px] shrink-0 items-center justify-between rounded-md border border-grey-600 bg-white px-2 text-ink">
+			<div className="mt-4 flex items-center gap-2 sm:gap-3">
+				<div className="flex h-[46px] w-[112px] shrink-0 sm:w-[140px] items-center justify-between rounded-md border border-grey-600 bg-white px-2 text-ink">
 					<button
 						type="button"
 						onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -243,13 +243,16 @@ function ProductSummary({ product }: { product: ProductDetail }) {
 					type="button"
 					onClick={addToCart}
 					disabled={soldOut}
-					className="h-[46px] flex-1 gap-2 rounded-md text-[15px] font-medium"
+					className="h-[46px] min-w-0 flex-1 gap-2 rounded-md px-3 text-[15px] font-medium"
 				>
 					<ShoppingCart className="size-5" aria-hidden />
 					{soldOut ? "Sold out" : "Add to Cart"}
 				</Button>
 
-				<WishlistButton product={product} className="size-[50px] shrink-0 bg-primary-200 hover:bg-primary-300 [&_svg]:size-5" />
+				<WishlistButton
+					product={product}
+					className="size-[46px] shrink-0 sm:size-[50px] bg-primary-200 hover:bg-primary-300 [&_svg]:size-5"
+				/>
 			</div>
 
 			<hr className="mt-4 border-grey-600" />

@@ -45,7 +45,7 @@ export function VendorsView() {
 				<div
 					role="tablist"
 					aria-label="Vendor status"
-					className="hide-scroll flex max-w-full overflow-x-auto border-b border-grey-600"
+					className="relative hide-scroll flex max-w-full overflow-x-auto border-b border-grey-600"
 				>
 					{([undefined, ...VENDOR_STATUSES] as (VendorStatus | undefined)[]).map((s) => (
 						<button
@@ -91,7 +91,7 @@ export function VendorsView() {
 					</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[900px]">
 								<thead className="border-b border-grey-600 bg-grey-500">
 									<tr>

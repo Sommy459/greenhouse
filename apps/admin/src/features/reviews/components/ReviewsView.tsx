@@ -171,7 +171,8 @@ function ReviewRow({ review: r }: { review: AdminReview }) {
 							size="sm"
 							disabled={reason.trim().length < 3}
 							isLoading={moderate.isPending}
-							className="bg-error-500 hover:bg-error-700"
+							variant="destructive"
+							className="hover:bg-error-700"
 						>
 							Hide review
 						</Button>

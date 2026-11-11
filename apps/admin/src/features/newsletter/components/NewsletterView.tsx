@@ -115,7 +115,7 @@ function Subscribers() {
 					</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[720px]">
 								<thead className="bg-grey-500">
 									<tr>
@@ -200,7 +200,7 @@ function Campaigns() {
 					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">No campaigns yet.</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[820px]">
 								<thead className="bg-grey-500">
 									<tr>

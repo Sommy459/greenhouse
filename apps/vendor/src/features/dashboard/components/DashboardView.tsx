@@ -157,7 +157,7 @@ export function DashboardView() {
 						No orders yet. They show up here once a customer pays.
 					</p>
 				) : (
-					<div className="overflow-x-auto border-t border-grey-600">
+					<div className="relative overflow-x-auto border-t border-grey-600">
 						<table className="w-full min-w-[720px]">
 							<thead className="bg-grey-500">
 								<tr>

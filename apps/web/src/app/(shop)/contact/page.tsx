@@ -112,16 +112,24 @@ function SocialHandles({ className }: { className?: string }) {
 		<ul className={cn("flex flex-col gap-2", className)} aria-label="Fysi on social media">
 			{links.map((link) => (
 				<li key={link.label}>
-					<a
-						href={link.href}
-						target="_blank"
-						rel="noreferrer"
-						className="flex w-fit items-center gap-1.5 text-[13px] text-ink hover:text-primary-500"
-						aria-label={`${link.label} ${link.handle}`}
-					>
-						<span aria-hidden>{link.icon}</span>
-						{link.handle}
-					</a>
+					{/* Until a profile URL is set in lib/site.ts the handle shows as text, not a link that goes nowhere. */}
+					{link.href ? (
+						<a
+							href={link.href}
+							target="_blank"
+							rel="noreferrer"
+							className="flex w-fit items-center gap-1.5 text-[13px] text-ink hover:text-primary-500"
+							aria-label={`${link.label} ${link.handle}`}
+						>
+							<span aria-hidden>{link.icon}</span>
+							{link.handle}
+						</a>
+					) : (
+						<span className="flex w-fit items-center gap-1.5 text-[13px] text-ink" aria-label={`${link.label} ${link.handle}`}>
+							<span aria-hidden>{link.icon}</span>
+							{link.handle}
+						</span>
+					)}
 				</li>
 			))}
 		</ul>

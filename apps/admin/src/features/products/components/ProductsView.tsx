@@ -148,7 +148,7 @@ function Products({ onEdit }: { onEdit: (product: AdminProduct) => void }) {
 					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">No products here.</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[960px]">
 								<thead className="border-b border-grey-600 bg-grey-500">
 									<tr>
@@ -313,7 +313,8 @@ function ModerationDialog({
 					<Button
 						disabled={!ok || moderate.isPending || !acting}
 						isLoading={moderate.isPending}
-						className="bg-error-500 hover:bg-error-700"
+						variant="destructive"
+						className="hover:bg-error-700"
 						onClick={() =>
 							acting &&
 							moderate.mutate(

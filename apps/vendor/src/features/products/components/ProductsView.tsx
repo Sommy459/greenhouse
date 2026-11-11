@@ -159,7 +159,7 @@ export function ProductsView() {
 					</div>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[900px]">
 								<thead className="border-b border-grey-600 bg-grey-500">
 									<tr>

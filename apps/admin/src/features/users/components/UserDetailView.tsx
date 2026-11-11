@@ -187,7 +187,8 @@ function Actions({ user }: { user: UserDetail }) {
 							type="submit"
 							disabled={!ok}
 							isLoading={suspend.isPending || reset2fa.isPending || remove.isPending}
-							className={clsx("flex-1", mode !== "reset" && "bg-error-500 hover:bg-error-700")}
+							variant={mode === "reset" ? "default" : "destructive"}
+							className={clsx("flex-1", mode !== "reset" && "hover:bg-error-700")}
 						>
 							{mode === "suspend" ? "Suspend" : mode === "delete" ? "Delete" : "Reset"}
 						</Button>

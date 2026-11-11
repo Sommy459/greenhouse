@@ -112,8 +112,8 @@ function AnnouncementBar() {
 					{SUPPORT_PHONE}
 				</a>
 				<div className="mx-auto flex items-center gap-12 pr-28">
-					<Link href={shopRoutes.COLLECTION("hot-deals")} className="hover:underline">
-						Get 50% Off on Selected Items
+					<Link href={shopRoutes.COLLECTION("certified")} className="hover:underline">
+						Shop certified eco-friendly products
 					</Link>
 					<a href={VENDOR_URL} className="hover:underline">
 						Sell on {SITE_NAME}

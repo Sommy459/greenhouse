@@ -59,7 +59,7 @@ export function TicketsView() {
 			<div
 				role="tablist"
 				aria-label="Ticket status"
-				className="hide-scroll mt-8 flex w-fit max-w-full overflow-x-auto border-b border-grey-600"
+				className="relative hide-scroll mt-8 flex w-fit max-w-full overflow-x-auto border-b border-grey-600"
 			>
 				{([undefined, ...TICKET_STATUSES] as (TicketStatus | undefined)[]).map((s) => (
 					<button
@@ -126,7 +126,7 @@ export function TicketsView() {
 					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">No tickets here.</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[900px]">
 								<thead className="bg-grey-500">
 									<tr>

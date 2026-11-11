@@ -217,7 +217,10 @@ function VendorPart({ order, part }: { order: Order; part: VendorOrder }) {
 
 			{part.status === "cancelled" ? (
 				<p className="mt-5 rounded-md border border-error-500 bg-error-50 p-4 text-sm text-ink">
-					This part of the order was cancelled and refunded to you.
+					{/* Only a paid order has anything to refund; an expired or unpaid one was never charged. */}
+					{order.status === "paid"
+						? "This part of the order was cancelled and refunded to you."
+						: "This part of the order was cancelled. It was never paid, so nothing was charged."}
 				</p>
 			) : (
 				order.status === "paid" && <StatusHistory steps={steps} />

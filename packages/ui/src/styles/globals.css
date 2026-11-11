@@ -214,6 +214,10 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+  /* Browsers give <fieldset> min-width: min-content, so a long name inside one widens the whole page on phones. */
+  fieldset {
+    min-width: 0;
+  }
 }
 
 /* HTML: <div class="loader"></div> */

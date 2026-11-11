@@ -18,7 +18,7 @@ export function OrderStatusBadge({ order }: { order: Order }) {
 /** Figma orders table (Order History and My Account's Recent Orders History): Order ID, Date, Price, Status, View Details. */
 export function OrdersTable({ orders, isPending, rows = 5 }: { orders: Order[]; isPending: boolean; rows?: number }) {
 	return (
-		<div className="overflow-x-auto">
+		<div className="relative overflow-x-auto">
 			<table className="w-full min-w-[720px]">
 				<thead className="border-b border-grey-600 bg-grey-500">
 					<tr>

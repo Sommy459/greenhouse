@@ -45,7 +45,7 @@ export function UsersView() {
 				</div>
 			</ListHeader>
 			<div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-				<div role="tablist" aria-label="Role" className="hide-scroll flex max-w-full overflow-x-auto border-b border-grey-600">
+				<div role="tablist" aria-label="Role" className="relative hide-scroll flex max-w-full overflow-x-auto border-b border-grey-600">
 					{([undefined, ...ROLES] as (Role | undefined)[]).map((r) => (
 						<button
 							key={r ?? "all"}
@@ -89,7 +89,7 @@ export function UsersView() {
 					<p className="rounded-xl border border-grey-600 bg-white py-16 text-center text-sm text-grey-900">No one matches.</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[760px]">
 								<thead className="border-b border-grey-600 bg-grey-500">
 									<tr>

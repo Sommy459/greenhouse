@@ -12,7 +12,7 @@ const SOCIALS = [
 	{ label: "Instagram", href: SOCIAL_LINKS.instagram, icon: FaInstagram },
 	{ label: "X", href: SOCIAL_LINKS.x, icon: FaXTwitter },
 	{ label: "Facebook", href: SOCIAL_LINKS.facebook, icon: FaFacebookF },
-];
+].filter((s) => s.href);
 
 /** Figma landing page footer: columns on desktop, stacked with a collapsible catalogue on mobile. */
 export function StoreFooter() {

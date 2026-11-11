@@ -321,7 +321,13 @@ function Decision({ vendor }: { vendor: VendorDetail }) {
 						<Button type="button" variant="outline" onClick={() => setMode(null)} disabled={busy} className="flex-1">
 							Back
 						</Button>
-						<Button type="submit" isLoading={busy} disabled={!reasonOk} className="flex-1 bg-error-500 hover:bg-error-700">
+						<Button
+							type="submit"
+							isLoading={busy}
+							disabled={!reasonOk}
+							variant="destructive"
+							className="flex-1 hover:bg-error-700"
+						>
 							{mode === "reject" ? "Reject" : "Suspend"}
 						</Button>
 					</div>

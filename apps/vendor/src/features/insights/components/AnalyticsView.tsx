@@ -168,7 +168,7 @@ export function AnalyticsView() {
 						</Button>
 					</div>
 				</div>
-				<div className="overflow-x-auto border-t border-grey-600">
+				<div className="relative overflow-x-auto border-t border-grey-600">
 					<table className="w-full min-w-[860px]">
 						<thead className="bg-grey-500">
 							<tr>

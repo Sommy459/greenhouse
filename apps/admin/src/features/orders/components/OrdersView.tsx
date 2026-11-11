@@ -49,7 +49,7 @@ export function OrdersView() {
 			<div
 				role="tablist"
 				aria-label="Escrow"
-				className="hide-scroll mt-8 flex max-w-full overflow-x-auto border-b border-grey-600"
+				className="relative hide-scroll mt-8 flex max-w-full overflow-x-auto border-b border-grey-600"
 			>
 				{([undefined, ...ESCROW_STATUSES] as (EscrowStatus | undefined)[]).map((s) => (
 					<button
@@ -82,7 +82,7 @@ export function OrdersView() {
 					</p>
 				) : (
 					<div className="overflow-hidden rounded-xl border border-grey-600 bg-white">
-						<div className="overflow-x-auto">
+						<div className="relative overflow-x-auto">
 							<table className="w-full min-w-[1000px]">
 								<thead className="border-b border-grey-600 bg-grey-500">
 									<tr>
@@ -215,7 +215,8 @@ function SettleDialog({
 					<Button
 						disabled={!ok || !acting}
 						isLoading={settle.isPending}
-						className={release ? "" : "bg-error-500 hover:bg-error-700"}
+						variant={release ? "default" : "destructive"}
+						className={release ? "" : "hover:bg-error-700"}
 						onClick={() => acting && settle.mutate({ ...acting, reason: reason.trim() }, { onSuccess: onClose })}
 					>
 						{release ? "Release payout" : "Refund customer"}

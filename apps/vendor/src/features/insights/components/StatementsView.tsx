@@ -110,7 +110,7 @@ export function StatementsView() {
 							{data.entries.length === 0 ? (
 								<p className="py-16 text-center text-sm text-grey-900">Nothing in this range.</p>
 							) : (
-								<div className="overflow-x-auto">
+								<div className="relative overflow-x-auto">
 									<table className="w-full min-w-[760px] text-sm">
 										<thead className="bg-grey-500">
 											<tr>

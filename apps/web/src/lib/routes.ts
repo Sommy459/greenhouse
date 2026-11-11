@@ -3,7 +3,7 @@
 export const shopRoutes = {
 	HOME: "/",
 	CATEGORY: (slug: string) => `/categories/${slug}`,
-	/** new-in · on-demand · hot-deals · sustainability */
+	/** new-in · certified (COLLECTION_LINKS in lib/navigation.ts) */
 	COLLECTION: (slug: string) => `/collections/${slug}`,
 	SEARCH: (q?: string) => (q ? `/search?${new URLSearchParams({ q })}` : "/search"),
 	PRODUCT: (slug: string) => `/products/${slug}`,
