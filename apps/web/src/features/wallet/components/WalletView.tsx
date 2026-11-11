@@ -139,7 +139,9 @@ function WalletDetails({ wallet }: { wallet: Wallet }) {
 					</p>
 					<CopyField label="Your wallet address" value={wallet.address} className="mt-3" />
 				</div>
-				<QrCode value={wallet.depositUri} label="QR code with your wallet address" className="mx-auto w-full max-w-[220px]" />
+				{/* The plain G… address, not the API's `depositUri`: wallet send screens (Vibrant, Freighter) scan an address and
+				    reject a SEP-7 `web+stellar:` URI as "invalid Stellar address". A deposit needs no amount or memo. */}
+				<QrCode value={wallet.address} label="QR code with your wallet address" className="mx-auto w-full max-w-[220px]" />
 			</section>
 
 			<section

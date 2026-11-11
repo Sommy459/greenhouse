@@ -7,6 +7,7 @@ import { CircleAlert, CircleCheck, FileText, Store, Trash2, Upload } from "lucid
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Textarea } from "@repo/ui/textarea";
+import { cn } from "@repo/ui/lib/utils";
 import { useSignOut } from "@/features/auth/hooks";
 import {
 	useCategories,
@@ -238,7 +239,8 @@ function BusinessDetails({ profile }: { profile: VendorProfile }) {
 							value={values.directorIdType}
 							onChange={set("directorIdType")}
 							disabled={locked}
-							className={clsx(FIELD, "w-24 shrink-0")}
+							// cn, not clsx: FIELD has w-full, which would beat w-24 and squeeze the ID number input to nothing.
+							className={cn(FIELD, "w-24 shrink-0")}
 							aria-label="ID type"
 						>
 							<option value="nin">NIN</option>
